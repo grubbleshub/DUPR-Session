@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Moreton City Pickleball — DUPR Night Manager</title>
+<style>
+:root {
+  --blue: #2e5cb8;
+  --blue-dark: #253b7a;
+  --blue-darker: #1b2d5e;
+  --blue-light: #eaeffa;
+  --blue-mid: #3a6fd8;
+  --yellow: #f5c842;
+  --yellow-dark: #d4a820;
+  --white: #fff;
+  --gray-100: #f4f6fb;
+  --gray-200: #dde2ee;
+  --gray-500: #8a96b8;
+  --gray-700: #4a5470;
+  --gray-900: #1a1e30;
+  --red: #e53e3e;
+  --shadow: 0 2px 10px rgba(27,45,94,.10);
+  --shadow-lg: 0 6px 28px rgba(27,45,94,.16);
+  --radius: 8px;
+  --radius-lg: 14px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--gray-100);color:var(--gray-900);min-height:100vh}
+
+/* HEADER */
+header{background:var(--blue-darker);color:#fff;box-shadow:var(--shadow-lg)}
+.header-top{display:flex;align-items:center;gap:16px;padding:12px 24px}
+.header-logo{height:56px;width:auto;border-radius:6px;background:#fff;padding:3px}
+.header-title h1{font-size:1.3rem;font-weight:800;letter-spacing:.3px}
+.header-title p{font-size:.8rem;opacity:.7;margin-top:2px}
+/* back breadcrumb */
+.back-btn{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.12);border:none;color:rgba(255,255,255,.85);padding:6px 14px;border-radius:20px;cursor:pointer;font-size:.82rem;font-weight:700;transition:background .18s;margin-left:auto}
+.back-btn:hover{background:rgba(255,255,255,.22)}
+
+/* LAYOUT */
+main{max-width:1080px;margin:0 auto;padding:24px 16px 80px}
+
+/* CARD */
+.card{background:#fff;border-radius:var(--radius-lg);box-shadow:var(--shadow);padding:22px;margin-bottom:18px}
+.card-title{font-size:1.05rem;font-weight:700;color:var(--blue-darker);margin-bottom:16px;display:flex;align-items:center;gap:8px}
+
+/* ── HOME TILES ──────────────────────────────── */
+.home-hero{text-align:center;padding:32px 0 24px}
+.home-hero h2{font-size:1.7rem;font-weight:800;color:var(--blue-darker);margin-bottom:8px}
+.home-hero p{color:var(--gray-700);font-size:.95rem}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:18px;margin-top:8px}
+.tile{background:#fff;border-radius:var(--radius-lg);box-shadow:var(--shadow);padding:30px 20px 26px;text-align:center;cursor:pointer;transition:all .2s;border:2px solid transparent;user-select:none}
+.tile:hover{border-color:var(--blue-mid);box-shadow:var(--shadow-lg);transform:translateY(-3px)}
+.tile:active{transform:translateY(0)}
+.tile-icon{font-size:2.6rem;margin-bottom:14px;display:block}
+.tile-name{font-size:1rem;font-weight:800;color:var(--blue-darker);margin-bottom:6px}
+.tile-desc{font-size:.8rem;color:var(--gray-500);line-height:1.5}
+.tile.tile-accent{background:var(--blue-darker);color:#fff}
+.tile.tile-accent .tile-name{color:#fff}
+.tile.tile-accent .tile-desc{color:rgba(255,255,255,.65)}
+.tile.tile-accent:hover{border-color:var(--yellow)}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:10px 18px;border-radius:var(--radius);border:none;cursor:pointer;font-size:.88rem;font-weight:700;transition:all .18s;line-height:1}
+.btn-primary{background:var(--blue-darker);color:#fff}
+.btn-primary:hover{background:var(--blue-dark)}
+.btn-secondary{background:#fff;color:var(--blue-dark);border:2px solid var(--blue)}
+.btn-secondary:hover{background:var(--blue-light)}
+.btn-danger{background:var(--red);color:#fff}
+.btn-danger:hover{background:#c53030}
+.btn-sm{padding:5px 11px;font-size:.78rem}
+.btn-yellow{background:var(--yellow);color:var(--blue-darker)}
+.btn-yellow:hover{background:var(--yellow-dark)}
+
+/* FORMS */
+.form-group{margin-bottom:14px}
+label{display:block;font-size:.82rem;font-weight:700;color:var(--gray-700);margin-bottom:5px}
+input,select{width:100%;padding:9px 12px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:.9rem;color:var(--gray-900);background:#fff;transition:border-color .18s}
+input:focus,select:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(46,92,184,.12)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:600px){.form-row{grid-template-columns:1fr}.tiles{grid-template-columns:1fr 1fr}}
+
+/* TABLES */
+table{width:100%;border-collapse:collapse}
+th{background:var(--blue-light);color:var(--blue-darker);font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:.5px;padding:9px 12px;text-align:left}
+td{padding:9px 12px;border-bottom:1px solid var(--gray-200);font-size:.88rem;vertical-align:top}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--gray-100)}
+
+/* BADGES */
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:.73rem;font-weight:700}
+.badge-blue{background:var(--blue-light);color:var(--blue-darker)}
+.badge-yellow{background:#fef9c3;color:#854d0e}
+.badge-gray{background:var(--gray-200);color:var(--gray-700)}
+.badge-green{background:#dcfce7;color:#166534}
+
+/* POOL BLOCKS */
+.pool-header{background:var(--blue-darker);color:#fff;padding:10px 16px;border-radius:var(--radius) var(--radius) 0 0;font-weight:700;display:flex;align-items:center;justify-content:space-between;font-size:.9rem}
+.pool-body{border:2px solid var(--blue-darker);border-top:none;border-radius:0 0 var(--radius) var(--radius);padding:16px;margin-bottom:20px}
+
+/* MATCH CARDS */
+.match-card{border:1.5px solid var(--gray-200);border-radius:var(--radius);padding:14px;margin-bottom:10px;transition:border-color .18s,background .18s}
+.match-card.completed{border-color:var(--blue);background:#f0f5ff}
+.match-teams{display:flex;align-items:stretch;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.team-box{flex:1;min-width:120px;background:var(--blue-light);border-radius:var(--radius);padding:10px;text-align:center}
+.team-box .team-label{font-size:.72rem;font-weight:800;color:var(--blue-dark);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px}
+.team-box .team-players{font-size:.9rem;font-weight:600;color:var(--gray-900);line-height:1.4}
+.vs-badge{font-weight:900;color:var(--gray-500);font-size:1.1rem;align-self:center;flex-shrink:0}
+.score-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.score-game{display:flex;align-items:center;gap:4px;background:var(--gray-100);border-radius:6px;padding:6px 10px}
+.score-game-label{font-size:.68rem;color:var(--gray-500);font-weight:700;text-align:center;line-height:1;margin-bottom:2px}
+.score-input{width:52px!important;padding:6px 4px!important;font-size:1.05rem!important;font-weight:800!important;text-align:center;border:1.5px solid var(--gray-200);border-radius:6px}
+.score-sep{font-weight:900;color:var(--gray-500)}
+input[type=number]{-moz-appearance:textfield}
+input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
+
+/* INNER TABS */
+.inner-tabs{display:flex;gap:4px;background:var(--gray-200);padding:4px;border-radius:var(--radius);margin-bottom:20px;width:fit-content}
+.inner-tab{padding:8px 16px;border:none;border-radius:6px;background:none;cursor:pointer;font-size:.85rem;font-weight:700;color:var(--gray-700);transition:all .18s}
+.inner-tab.active{background:#fff;color:var(--blue-darker);box-shadow:var(--shadow)}
+
+/* PILLS */
+.pill{display:inline-flex;align-items:center;gap:5px;background:var(--blue-light);border:1.5px solid var(--blue);border-radius:20px;padding:4px 12px;font-size:.8rem;font-weight:700;color:var(--blue-darker);margin:3px}
+
+/* MISC */
+.section{display:none}
+.section.active{display:block}
+.inner-section{display:none}
+.inner-section.active{display:block}
+.empty-state{text-align:center;padding:40px 24px;color:var(--gray-500);font-size:.9rem}
+.alert{padding:12px 16px;border-radius:var(--radius);margin-bottom:14px;font-size:.88rem;line-height:1.5}
+.alert-info{background:#eff6ff;color:#1e40af;border-left:4px solid #3b82f6}
+.alert-success{background:#f0fdf4;color:#166534;border-left:4px solid #22c55e}
+.alert-warning{background:#fefce8;color:#854d0e;border-left:4px solid #f59e0b}
+.round-divider{display:flex;align-items:center;gap:12px;margin:18px 0 10px}
+.round-divider-label{font-weight:800;font-size:.85rem;color:var(--blue-darker);white-space:nowrap}
+.round-divider-line{flex:1;height:1px;background:var(--gray-200)}
+.court-tag{display:inline-flex;align-items:center;gap:4px;background:var(--blue-darker);color:#fff;padding:2px 9px;border-radius:4px;font-size:.73rem;font-weight:800}
+pre{font-family:Menlo,Consolas,monospace;font-size:.72rem;overflow-x:auto;background:#f5f5f5;padding:14px;border-radius:8px;color:#333;white-space:pre;line-height:1.5}
+
+/* TOAST */
+.toast{position:fixed;bottom:24px;right:24px;z-index:9999;background:var(--blue-darker);color:#fff;padding:12px 20px;border-radius:var(--radius);font-size:.88rem;font-weight:600;box-shadow:var(--shadow-lg);max-width:300px;animation:slideIn .25s ease;transition:opacity .4s}
+@keyframes slideIn{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-top">
+    <img class="header-logo" src="https://www.moretoncitypickleball.com.au/assets/img/MCP_logo.JPG" alt="MCP" onerror="this.style.display='none'">
+    <div class="header-title">
+      <h1>DUPR Night Manager</h1>
+      <p>Moreton City Pickleball</p>
+    </div>
+    <button class="back-btn" id="backBtn" onclick="showTab('home')" style="display:none">← Home</button>
+  </div>
+</header>
+
+<main>
+
+<!-- ========== HOME ========== -->
+<section id="tab-home" class="section active">
+  <div class="home-hero">
+    <h2>DUPR Night Manager</h2>
+    <p>Select a section below to get started</p>
+  </div>
+  <div class="tiles">
+    <div class="tile tile-accent" onclick="navTile('setup')">
+      <span class="tile-icon">⚙️</span>
+      <div class="tile-name">Event Setup</div>
+      <div class="tile-desc">Set your event name and date for the night</div>
+    </div>
+    <div class="tile tile-accent" onclick="navTile('players')">
+      <span class="tile-icon">👥</span>
+      <div class="tile-name">Players</div>
+      <div class="tile-desc">Import or manually add players and their DUPR IDs</div>
+    </div>
+    <div class="tile tile-accent" onclick="navTile('foc')">
+      <span class="tile-icon">🏓</span>
+      <div class="tile-name">Four on a Court</div>
+      <div class="tile-desc">Round robin rotation for groups of 4 — 3 match combinations</div>
+    </div>
+    <div class="tile tile-accent" onclick="navTile('fp')">
+      <span class="tile-icon">🤝</span>
+      <div class="tile-name">Fixed Partner</div>
+      <div class="tile-desc">Fixed doubles teams in pool-based round robin — no finals</div>
+    </div>
+    <div class="tile tile-accent" onclick="navTile('export')">
+      <span class="tile-icon">📤</span>
+      <div class="tile-name">Export CSV</div>
+      <div class="tile-desc">Download completed matches as a DUPR import-ready CSV</div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:28px">
+    <div class="card-title">📋 Quick Start</div>
+    <div class="alert alert-info">
+      <strong>Step 1 — Event Setup:</strong> Enter your event name and date.<br>
+      <strong>Step 2 — Players:</strong> Import from CSV (Name, DUPR ID) — export your Google Sheet as CSV and upload it.<br>
+      <strong>Step 3 — Choose a format:</strong> Four on a Court (groups of 4, auto 3-match rotation) or Fixed Partner (registered teams, pool round robin).<br>
+      <strong>Step 4 — Export:</strong> Download the DUPR import CSV once all matches are complete.
+    </div>
+  </div>
+</section>
+
+<!-- ========== SETUP ========== -->
+<section id="tab-setup" class="section">
+  <div class="card">
+    <div class="card-title">⚙️ Event Configuration</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Event Name</label>
+        <input type="text" id="eventName" placeholder="e.g. MCP DUPR Night — May 2026" value="Moreton City Pickleball DUPR Night">
+      </div>
+      <div class="form-group">
+        <label>Event Date</label>
+        <input type="date" id="eventDate">
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="saveEvent()">✓ Save Configuration</button>
+  </div>
+  <div class="card">
+    <div class="card-title">ℹ️ DUPR Export Format</div>
+    <div class="alert alert-success">
+      Each exported row is a completed doubles match containing player names, DUPR IDs, and up to 3 game scores — formatted to the DUPR import template spec, ready to upload directly.
+    </div>
+  </div>
+</section>
+
+<!-- ========== PLAYERS ========== -->
+<section id="tab-players" class="section">
+  <div class="card">
+    <div class="card-title">📥 Import Players from CSV</div>
+    <div class="alert alert-info">
+      Your CSV must have two columns: <strong>Player Name</strong> and <strong>DUPR ID</strong>.<br>
+      From Google Sheets: <em>File → Download → Comma Separated Values (.csv)</em>
+    </div>
+    <div class="form-group">
+      <label>Upload Player CSV</label>
+      <input type="file" id="playerCsv" accept=".csv" onchange="importCSV(event)" style="padding:8px">
+    </div>
+    <div style="text-align:center;color:var(--gray-500);margin:6px 0;font-size:.85rem">— or add manually —</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Full Name</label>
+        <input type="text" id="addName" placeholder="First Last">
+      </div>
+      <div class="form-group">
+        <label>DUPR ID</label>
+        <input type="text" id="addDupr" placeholder="e.g. BK5V6D">
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      <button class="btn btn-primary" onclick="addPlayer()">+ Add Player</button>
+      <button class="btn btn-danger btn-sm" onclick="clearPlayers()" style="margin-left:auto">Clear All</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">👥 Player List — <span id="playerCount">0</span> players</div>
+    <div id="playerTableWrap"><div class="empty-state">No players yet. Import a CSV or add manually above.</div></div>
+  </div>
+</section>
+
+<!-- ========== FOUR ON A COURT ========== -->
+<section id="tab-foc" class="section">
+  <div class="inner-tabs">
+    <button class="inner-tab active" onclick="showInner('foc','setup',this)">1. Setup Groups</button>
+    <button class="inner-tab" onclick="showInner('foc','play',this)">2. Record Scores</button>
+  </div>
+
+  <div id="foc-setup" class="inner-section active">
+    <div class="card">
+      <div class="card-title">🏓 Four on a Court — Group Setup</div>
+      <div class="alert alert-info">
+        Assign exactly 4 players per group. Three matches are auto-generated covering every partner combination:<br>
+        <strong>Match 1:</strong> P1&amp;P2 vs P3&amp;P4 &nbsp;|&nbsp; <strong>Match 2:</strong> P1&amp;P3 vs P2&amp;P4 &nbsp;|&nbsp; <strong>Match 3:</strong> P1&amp;P4 vs P2&amp;P3
+      </div>
+      <div class="form-group" style="max-width:200px">
+        <label>Number of Groups / Courts</label>
+        <input type="number" id="focGroups" min="1" max="20" value="1">
+      </div>
+      <button class="btn btn-primary" onclick="initFocGroups()">Create Groups</button>
+    </div>
+    <div id="focGroupCards"></div>
+    <div id="focGenBtn" style="display:none;margin-bottom:20px">
+      <button class="btn btn-yellow" style="font-size:1rem;padding:14px 28px" onclick="generateFocSchedule()">Generate Schedule &amp; Start Scoring →</button>
+    </div>
+  </div>
+
+  <div id="foc-play" class="inner-section">
+    <div id="focMatchArea"><div class="empty-state">Set up groups first, then generate the schedule.</div></div>
+  </div>
+</section>
+
+<!-- ========== FIXED PARTNER ========== -->
+<section id="tab-fp" class="section">
+  <div class="inner-tabs">
+    <button class="inner-tab active" onclick="showInner('fp','teams',this)">1. Register Teams</button>
+    <button class="inner-tab" onclick="showInner('fp','config',this)">2. Configure Pools</button>
+    <button class="inner-tab" onclick="showInner('fp','play',this)">3. Record Scores</button>
+  </div>
+
+  <div id="fp-teams" class="inner-section active">
+    <div class="card">
+      <div class="card-title">🤝 Register a Team</div>
+      <div class="alert alert-info">Teams are fixed partnerships. Select two players from your player list to form a team.</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Player 1</label>
+          <select id="fpP1"><option value="">Select player…</option></select>
+        </div>
+        <div class="form-group">
+          <label>Player 2</label>
+          <select id="fpP2"><option value="">Select player…</option></select>
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="addTeam()">+ Register Team</button>
+    </div>
+    <div class="card">
+      <div class="card-title">Registered Teams — <span id="teamCount">0</span></div>
+      <div id="teamListWrap"><div class="empty-state">No teams registered yet.</div></div>
+    </div>
+  </div>
+
+  <div id="fp-config" class="inner-section">
+    <div class="card">
+      <div class="card-title">⚙️ Pool &amp; Court Configuration</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Number of Pools</label>
+          <input type="number" id="fpPoolCount" min="1" max="10" value="1">
+        </div>
+        <div class="form-group">
+          <label>Courts Available</label>
+          <input type="number" id="fpCourts" min="1" max="20" value="2">
+        </div>
+      </div>
+      <button class="btn btn-yellow" style="font-size:1rem;padding:14px 28px" onclick="generateFpSchedule()">Generate Round Robin Schedule →</button>
+    </div>
+    <div id="fpPoolPreview"></div>
+  </div>
+
+  <div id="fp-play" class="inner-section">
+    <div id="fpMatchArea"><div class="empty-state">Generate a schedule first.</div></div>
+  </div>
+</section>
+
+<!-- ========== EXPORT ========== -->
+<section id="tab-export" class="section">
+  <div class="card">
+    <div class="card-title">📤 Export DUPR Import CSV</div>
+    <div class="alert alert-info">
+      Only <strong>completed</strong> matches are exported. At minimum Game 1 scores must be recorded.<br>
+      The CSV format matches the DUPR import template exactly. Remove header rows as per DUPR instructions before importing.
+    </div>
+    <div id="exportSummary" style="margin-bottom:16px"></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="doExport('foc')">Export Four on a Court</button>
+      <button class="btn btn-primary" onclick="doExport('fp')">Export Fixed Partner</button>
+      <button class="btn btn-secondary" onclick="doExport('all')">Export All Matches</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Preview (first 8 rows)</div>
+    <pre id="csvPreview">No completed matches yet.</pre>
+  </div>
+</section>
+
+</main>
+
+<script>
+// ─── STATE ────────────────────────────────────────────────────────────────────
+const S = {
+  event: { name: 'Moreton City Pickleball DUPR Night', date: '' },
+  players: [],
+  foc: { groups: [] },
+  fp: { teams: [], pools: [], courts: 2 }
+};
+
+document.getElementById('eventDate').value = new Date().toISOString().slice(0,10);
+S.event.date = document.getElementById('eventDate').value;
+
+// ─── TABS ─────────────────────────────────────────────────────────────────────
+function showTab(name) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  document.getElementById('backBtn').style.display = name === 'home' ? 'none' : 'inline-flex';
+  if (name === 'players') renderPlayerTable();
+  if (name === 'fp') populateFpSelects();
+  if (name === 'export') renderExport();
+}
+
+function navTile(name) { showTab(name); }
+
+function showInner(prefix, name, btn) {
+  document.querySelectorAll(`[id^="${prefix}-"]`).forEach(el => {
+    if (el.classList.contains('inner-section')) el.classList.remove('active');
+  });
+  document.getElementById(`${prefix}-${name}`).classList.add('active');
+  const section = document.getElementById('tab-' + prefix);
+  section.querySelectorAll('.inner-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// ─── EVENT ────────────────────────────────────────────────────────────────────
+function saveEvent() {
+  S.event.name = document.getElementById('eventName').value.trim() || 'DUPR Night';
+  S.event.date = document.getElementById('eventDate').value || new Date().toISOString().slice(0,10);
+  toast('Event configuration saved!');
+}
+
+// ─── PLAYERS ─────────────────────────────────────────────────────────────────
+function importCSV(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const lines = ev.target.result.split(/\r?\n/).filter(l => l.trim());
+    let added = 0;
+    lines.forEach((line, i) => {
+      const cols = parseLine(line);
+      const raw0 = (cols[0]||'').trim().replace(/^["']|["']$/g,'');
+      if (i === 0 && /name|player/i.test(raw0)) return;
+      const name = raw0;
+      const duprId = (cols[1]||'').trim().replace(/^["']|["']$/g,'');
+      if (name && duprId && !S.players.find(p => p.duprId === duprId)) {
+        S.players.push({ id: uid(), name, duprId });
+        added++;
+      }
+    });
+    renderPlayerTable();
+    toast(`Imported ${added} player(s).`);
+    e.target.value = '';
+  };
+  reader.readAsText(file);
+}
+
+function parseLine(line) {
+  const r = []; let cur = '', q = false;
+  for (const ch of line) {
+    if (ch === '"') { q = !q; }
+    else if (ch === ',' && !q) { r.push(cur); cur = ''; }
+    else cur += ch;
+  }
+  r.push(cur); return r;
+}
+
+function addPlayer() {
+  const name = document.getElementById('addName').value.trim();
+  const duprId = document.getElementById('addDupr').value.trim();
+  if (!name || !duprId) { toast('Enter both name and DUPR ID.'); return; }
+  if (S.players.find(p => p.duprId === duprId)) { toast('DUPR ID already exists.'); return; }
+  S.players.push({ id: uid(), name, duprId });
+  document.getElementById('addName').value = '';
+  document.getElementById('addDupr').value = '';
+  renderPlayerTable();
+}
+
+function removePlayer(id) {
+  S.players = S.players.filter(p => p.id !== id);
+  renderPlayerTable();
+}
+
+function clearPlayers() {
+  if (!confirm('Clear all players?')) return;
+  S.players = []; renderPlayerTable();
+}
+
+function renderPlayerTable() {
+  document.getElementById('playerCount').textContent = S.players.length;
+  const w = document.getElementById('playerTableWrap');
+  if (!S.players.length) { w.innerHTML = '<div class="empty-state">No players yet.</div>'; return; }
+  w.innerHTML = `<table>
+    <thead><tr><th>#</th><th>Name</th><th>DUPR ID</th><th></th></tr></thead>
+    <tbody>${S.players.map((p,i) => `
+      <tr>
+        <td style="text-align:center;color:var(--gray-500)">${i+1}</td>
+        <td><strong>${esc(p.name)}</strong></td>
+        <td><code style="font-size:.85rem;background:var(--blue-light);padding:2px 7px;border-radius:4px">${esc(p.duprId)}</code></td>
+        <td><button class="btn btn-danger btn-sm" onclick="removePlayer(${p.id})">✕</button></td>
+      </tr>`).join('')}
+    </tbody></table>`;
+}
+
+// ─── FOUR ON A COURT ──────────────────────────────────────────────────────────
+function initFocGroups() {
+  const n = Math.max(1, parseInt(document.getElementById('focGroups').value)||1);
+  S.foc.groups = Array.from({length:n}, () => ({ players:[null,null,null,null], matches:[] }));
+  // Auto-assign players sequentially: group 0 gets players 0-3, group 1 gets 4-7, etc.
+  S.players.forEach((p, i) => {
+    const gi = Math.floor(i / 4);
+    const pi = i % 4;
+    if (gi < n) S.foc.groups[gi].players[pi] = p;
+  });
+  renderFocGroupCards();
+  document.getElementById('focGenBtn').style.display = 'block';
+}
+
+function renderFocGroupCards() {
+  document.getElementById('focGroupCards').innerHTML = S.foc.groups.map((g,gi) => `
+    <div class="card">
+      <div class="card-title">Group ${gi+1} — Court ${gi+1}</div>
+      <div class="form-row" style="grid-template-columns:1fr 1fr">
+        ${[0,1,2,3].map(pi => `
+          <div class="form-group">
+            <label>Player ${pi+1}</label>
+            <select onchange="assignFocPlayer(${gi},${pi},this.value)">
+              <option value="">Select player…</option>
+              ${S.players.map(p => `<option value="${p.id}" ${g.players[pi]&&g.players[pi].id===p.id?'selected':''}>${esc(p.name)}</option>`).join('')}
+            </select>
+          </div>`).join('')}
+      </div>
+    </div>`).join('');
+}
+
+function assignFocPlayer(gi, pi, id) {
+  S.foc.groups[gi].players[pi] = S.players.find(p => p.id==id) || null;
+}
+
+function generateFocSchedule() {
+  let ok = true;
+  S.foc.groups.forEach((g, gi) => {
+    if (g.players.some(p => !p)) { toast(`Group ${gi+1}: assign all 4 players.`); ok = false; return; }
+    const [p0,p1,p2,p3] = g.players;
+    g.matches = [
+      { teamA:[p0,p1], teamB:[p2,p3], scores:[], completed:false, round:1, court:gi+1 },
+      { teamA:[p0,p2], teamB:[p1,p3], scores:[], completed:false, round:2, court:gi+1 },
+      { teamA:[p0,p3], teamB:[p1,p2], scores:[], completed:false, round:3, court:gi+1 }
+    ];
+  });
+  if (!ok) return;
+  renderFocMatches();
+  showInner('foc','play', document.querySelector('#tab-foc .inner-tab:nth-child(2)'));
+  toast('Schedule generated!');
+}
+
+function renderFocMatches() {
+  const area = document.getElementById('focMatchArea');
+  if (!S.foc.groups.length) { area.innerHTML = '<div class="empty-state">Set up groups first.</div>'; return; }
+  area.innerHTML = S.foc.groups.map((g, gi) => `
+    <div>
+      <div class="pool-header">
+        <span>🏓 Group ${gi+1} — Court ${gi+1}</span>
+        <span>${g.matches.filter(m=>m.completed).length}/${g.matches.length} complete</span>
+      </div>
+      <div class="pool-body">
+        ${g.matches.map((m,mi) => matchCard(m,'foc',gi,mi)).join('')}
+      </div>
+    </div>`).join('');
+}
+
+// ─── FIXED PARTNER ────────────────────────────────────────────────────────────
+function populateFpSelects() {
+  const opts = '<option value="">Select player…</option>' +
+    S.players.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
+  document.getElementById('fpP1').innerHTML = opts;
+  document.getElementById('fpP2').innerHTML = opts;
+}
+
+function addTeam() {
+  const p1id = document.getElementById('fpP1').value;
+  const p2id = document.getElementById('fpP2').value;
+  if (!p1id || !p2id) { toast('Select both players.'); return; }
+  if (p1id === p2id) { toast('Select two different players.'); return; }
+  const p1 = S.players.find(p => p.id==p1id);
+  const p2 = S.players.find(p => p.id==p2id);
+  if (S.fp.teams.find(t => t.p1.id==p1id||t.p2.id==p1id||t.p1.id==p2id||t.p2.id==p2id)) {
+    toast('One or both players are already on a team.'); return;
+  }
+  S.fp.teams.push({ id: uid(), p1, p2, name: `${p1.name} & ${p2.name}` });
+  document.getElementById('fpP1').value = '';
+  document.getElementById('fpP2').value = '';
+  renderTeamList();
+}
+
+function removeTeam(id) {
+  S.fp.teams = S.fp.teams.filter(t => t.id !== id);
+  renderTeamList();
+}
+
+function renderTeamList() {
+  document.getElementById('teamCount').textContent = S.fp.teams.length;
+  const w = document.getElementById('teamListWrap');
+  if (!S.fp.teams.length) { w.innerHTML = '<div class="empty-state">No teams yet.</div>'; return; }
+  w.innerHTML = `<table>
+    <thead><tr><th>#</th><th>Team</th><th>Player 1</th><th>Player 2</th><th></th></tr></thead>
+    <tbody>${S.fp.teams.map((t,i) => `
+      <tr>
+        <td style="text-align:center;color:var(--gray-500)">${i+1}</td>
+        <td><strong>${esc(t.name)}</strong></td>
+        <td>${esc(t.p1.name)}<br><small style="color:var(--gray-500)">${esc(t.p1.duprId)}</small></td>
+        <td>${esc(t.p2.name)}<br><small style="color:var(--gray-500)">${esc(t.p2.duprId)}</small></td>
+        <td><button class="btn btn-danger btn-sm" onclick="removeTeam(${t.id})">✕</button></td>
+      </tr>`).join('')}
+    </tbody></table>`;
+}
+
+function generateFpSchedule() {
+  const poolCount = Math.max(1, parseInt(document.getElementById('fpPoolCount').value)||1);
+  const courts = Math.max(1, parseInt(document.getElementById('fpCourts').value)||2);
+  S.fp.courts = courts;
+  if (S.fp.teams.length < 2) { toast('Register at least 2 teams first.'); return; }
+  const pools = Array.from({length: poolCount}, () => ({ teams:[], matches:[] }));
+  S.fp.teams.forEach((t, i) => pools[i % poolCount].teams.push(t));
+  pools.forEach((pool, pi) => { pool.matches = roundRobin(pool.teams, courts, pi * 100); });
+  S.fp.pools = pools;
+  renderFpPoolPreview();
+  renderFpMatches();
+  showInner('fp', 'play', document.querySelector('#tab-fp .inner-tab:nth-child(3)'));
+  toast('Schedule generated!');
+}
+
+function roundRobin(teams, courts, courtOffset) {
+  const list = [...teams];
+  if (list.length % 2 !== 0) list.push(null);
+  const n = list.length;
+  const matches = [];
+  let courtNum = (courtOffset % courts) + 1;
+  for (let r = 0; r < n - 1; r++) {
+    for (let i = 0; i < n/2; i++) {
+      const a = list[i], b = list[n-1-i];
+      if (a && b) {
+        matches.push({ teamA:[a.p1,a.p2], teamB:[b.p1,b.p2], teamAObj:a, teamBObj:b,
+          round:r+1, court:courtNum, scores:[], completed:false });
+        courtNum = (courtNum % courts) + 1;
+      }
+    }
+    const last = list.splice(n-1,1)[0];
+    list.splice(1,0,last);
+  }
+  return matches;
+}
+
+function renderFpPoolPreview() {
+  document.getElementById('fpPoolPreview').innerHTML = S.fp.pools.map((pool,pi) => `
+    <div class="card">
+      <div class="card-title">Pool ${pi+1} — ${pool.teams.length} teams, ${pool.matches.length} matches</div>
+      <div>${pool.teams.map(t => `<span class="pill">🎾 ${esc(t.name)}</span>`).join('')}</div>
+    </div>`).join('');
+}
+
+function renderFpMatches() {
+  const area = document.getElementById('fpMatchArea');
+  if (!S.fp.pools.length) { area.innerHTML = '<div class="empty-state">Generate a schedule first.</div>'; return; }
+  area.innerHTML = S.fp.pools.map((pool, pi) => {
+    const rounds = [...new Set(pool.matches.map(m=>m.round))].sort((a,b)=>a-b);
+    return `
+      <div>
+        <div class="pool-header">
+          <span>Pool ${pi+1}</span>
+          <span>${pool.matches.filter(m=>m.completed).length}/${pool.matches.length} complete</span>
+        </div>
+        <div class="pool-body">
+          ${rounds.map(r => {
+            const rmatches = pool.matches.filter(m => m.round===r);
+            return `<div class="round-divider"><span class="round-divider-label">Round ${r}</span><div class="round-divider-line"></div></div>
+              ${rmatches.map(m => matchCard(m,'fp',pi,pool.matches.indexOf(m))).join('')}`;
+          }).join('')}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ─── MATCH CARD ───────────────────────────────────────────────────────────────
+function matchCard(match, type, groupIdx, matchIdx) {
+  const done = match.completed;
+  return `
+    <div class="match-card ${done?'completed':''}" id="mc-${type}-${groupIdx}-${matchIdx}">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <span class="badge ${done?'badge-green':'badge-gray'}">${done?'✓ Complete':'Round '+match.round}</span>
+        <span class="court-tag">Court ${match.court}</span>
+      </div>
+      <div class="match-teams">
+        <div class="team-box">
+          <div class="team-label">Team A</div>
+          <div class="team-players">${match.teamA.map(p=>esc(p.name)).join('<br>')}</div>
+        </div>
+        <div class="vs-badge">VS</div>
+        <div class="team-box">
+          <div class="team-label">Team B</div>
+          <div class="team-players">${match.teamB.map(p=>esc(p.name)).join('<br>')}</div>
+        </div>
+      </div>
+      <div class="score-row">
+        ${(type === 'foc' ? [0] : [0,1,2]).map(gi => {
+          const s = match.scores[gi]||{};
+          const lbl = type === 'foc' ? '' : `G${gi+1} `;
+          return `<div class="score-game">
+            <div style="text-align:center">
+              <div class="score-game-label">${lbl}Team A</div>
+              <input type="number" class="score-input" min="0" max="99" placeholder="—"
+                value="${s.a!==undefined?s.a:''}"
+                onchange="setScore('${type}',${groupIdx},${matchIdx},${gi},'a',this.value)">
+            </div>
+            <span class="score-sep">-</span>
+            <div style="text-align:center">
+              <div class="score-game-label">${lbl}Team B</div>
+              <input type="number" class="score-input" min="0" max="99" placeholder="—"
+                value="${s.b!==undefined?s.b:''}"
+                onchange="setScore('${type}',${groupIdx},${matchIdx},${gi},'b',this.value)">
+            </div>
+          </div>`;
+        }).join('')}
+        <button class="btn ${done?'btn-secondary':'btn-primary'} btn-sm" style="margin-left:auto"
+          onclick="toggleDone('${type}',${groupIdx},${matchIdx})">
+          ${done?'↩ Edit':'✓ Complete'}
+        </button>
+      </div>
+    </div>`;
+}
+
+function getMatch(type, gi, mi) {
+  return type==='foc' ? S.foc.groups[gi].matches[mi] : S.fp.pools[gi].matches[mi];
+}
+
+function setScore(type, gi, mi, gameIdx, team, val) {
+  const m = getMatch(type, gi, mi);
+  if (!m.scores[gameIdx]) m.scores[gameIdx] = {};
+  const v = parseInt(val);
+  m.scores[gameIdx][team] = isNaN(v) ? undefined : v;
+}
+
+function toggleDone(type, gi, mi) {
+  const m = getMatch(type, gi, mi);
+  if (!m.completed) {
+    const s0 = m.scores[0];
+    if (!s0||s0.a===undefined||s0.b===undefined) { toast('Enter at least Game 1 scores first.'); return; }
+    m.completed = true;
+  } else { m.completed = false; }
+  if (type==='foc') renderFocMatches();
+  else renderFpMatches();
+}
+
+// ─── EXPORT ───────────────────────────────────────────────────────────────────
+function buildRows(type) {
+  const rows = [];
+  const evt = S.event.name, dt = S.event.date;
+  function row(teamA, teamB, scores) {
+    const [a1,a2]=teamA, [b1,b2]=teamB;
+    const games=(scores||[]).filter(s=>s&&s.a!==undefined&&s.b!==undefined);
+    const sc=[];
+    for(let i=0;i<5;i++){const g=games[i];sc.push(g?g.a:'',g?g.b:'');}
+    rows.push(['','','','D',evt,dt,a1.name,a1.duprId,'',a2.name,a2.duprId,'',b1.name,b1.duprId,'',b2.name,b2.duprId,'','',...sc]);
+  }
+  if (type==='foc'||type==='all') S.foc.groups.forEach(g=>g.matches.filter(m=>m.completed).forEach(m=>row(m.teamA,m.teamB,m.scores)));
+  if (type==='fp'||type==='all') S.fp.pools.forEach(pool=>pool.matches.filter(m=>m.completed).forEach(m=>row(m.teamA,m.teamB,m.scores)));
+  return rows;
+}
+
+function toCSV(rows) {
+  return rows.map(r=>r.map(c=>{const s=String(c==null?'':c);return(s.includes(',')||s.includes('"'))?`"${s.replace(/"/g,'""')}"`:`${s}`}).join(',')).join('\n');
+}
+
+function doExport(type) {
+  const rows = buildRows(type);
+  if (!rows.length) { toast('No completed matches to export.'); return; }
+  const blob = new Blob([toCSV(rows)],{type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url; a.download=`DUPR_Import_${S.event.date}_${type}.csv`; a.click();
+  URL.revokeObjectURL(url);
+  toast(`Exported ${rows.length} match row(s).`);
+}
+
+function renderExport() {
+  const focN=buildRows('foc').length, fpN=buildRows('fp').length, all=buildRows('all');
+  document.getElementById('exportSummary').innerHTML=`
+    <div class="alert alert-${all.length?'success':'warning'}">
+      <strong>${all.length}</strong> completed match(es) ready.
+      &nbsp;|&nbsp; Four on a Court: <strong>${focN}</strong>
+      &nbsp;|&nbsp; Fixed Partner: <strong>${fpN}</strong>
+    </div>`;
+  document.getElementById('csvPreview').textContent=all.length
+    ?toCSV(all.slice(0,8))+(all.length>8?'\n…':'')
+    :'No completed matches yet.';
+}
+
+// ─── UTILS ────────────────────────────────────────────────────────────────────
+let _uid=Date.now();
+function uid(){return ++_uid;}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function toast(msg){
+  const el=document.createElement('div');
+  el.className='toast';el.textContent=msg;
+  document.body.appendChild(el);
+  setTimeout(()=>el.style.opacity='0',2500);
+  setTimeout(()=>el.remove(),2900);
+}
+</script>
+</body>
+</html>
