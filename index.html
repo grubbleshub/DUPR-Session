@@ -332,8 +332,18 @@ pre{font-family:Menlo,Consolas,monospace;font-size:.72rem;overflow-x:auto;backgr
 
   <div id="fp-teams" class="inner-section active">
     <div class="card">
-      <div class="card-title">🤝 Register a Team</div>
-      <div class="alert alert-info">Teams are fixed partnerships. Select two players from your player list to form a team.</div>
+      <div class="card-title">📥 Import Teams from CSV</div>
+      <div class="alert alert-info">
+        Each row should be: <strong>Player 1 Name, DUPR ID 1, Player 2 Name, DUPR ID 2</strong><br>
+        Players will be added to the player list automatically if not already present.
+      </div>
+      <div class="form-group">
+        <label>Upload Teams CSV</label>
+        <input type="file" id="fpTeamCsv" accept=".csv" onchange="importTeamCSV(event)" style="padding:8px">
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">🤝 Add Team Manually</div>
       <div class="form-row">
         <div class="form-group">
           <label>Player 1</label>
@@ -595,6 +605,38 @@ function populateFpSelects() {
     S.players.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
   document.getElementById('fpP1').innerHTML = opts;
   document.getElementById('fpP2').innerHTML = opts;
+}
+
+function importTeamCSV(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const lines = ev.target.result.split(/\r?\n/).filter(l => l.trim());
+    let teams = 0, players = 0;
+    lines.forEach((line, i) => {
+      const cols = parseLine(line).map(c => c.trim().replace(/^["']|["']$/g, ''));
+      if (i === 0 && /name|player/i.test(cols[0])) return;
+      const [n1, d1, n2, d2] = cols;
+      if (!n1 || !d1 || !n2 || !d2) return;
+      // ensure both players exist
+      const getOrAdd = (name, duprId) => {
+        let p = S.players.find(p => p.duprId === duprId);
+        if (!p) { p = { id: uid(), name, duprId }; S.players.push(p); players++; }
+        return p;
+      };
+      const p1 = getOrAdd(n1, d1);
+      const p2 = getOrAdd(n2, d2);
+      if (S.fp.teams.find(t => t.p1.id === p1.id || t.p2.id === p1.id || t.p1.id === p2.id || t.p2.id === p2.id)) return;
+      S.fp.teams.push({ id: uid(), p1, p2, name: `${p1.name} & ${p2.name}` });
+      teams++;
+    });
+    renderTeamList();
+    renderPlayerTable();
+    populateFpSelects();
+    toast(`Imported ${teams} team(s), ${players} new player(s).`);
+    e.target.value = '';
+  };
+  reader.readAsText(file);
 }
 
 function addTeam() {
