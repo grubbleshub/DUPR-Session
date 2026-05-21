@@ -714,23 +714,28 @@ function renderFpPoolPreview() {
 function renderFpMatches() {
   const area = document.getElementById('fpMatchArea');
   if (!S.fp.pools.length) { area.innerHTML = '<div class="empty-state">Generate a schedule first.</div>'; return; }
+  const multiPool = S.fp.pools.length > 1;
   area.innerHTML = S.fp.pools.map((pool, pi) => {
-    const key = `fp-${pi}`;
-    const col = S.collapsed[key];
     const rounds = [...new Set(pool.matches.map(m=>m.round))].sort((a,b)=>a-b);
     return `
-      <div>
-        <div class="pool-header ${col?'collapsed':''}" onclick="togglePool('${key}')">
-          <span>Pool ${pi+1}</span>
-          <span>${pool.matches.filter(m=>m.completed).length}/${pool.matches.length} complete <i class="chevron">▾</i></span>
-        </div>
-        <div class="pool-body ${col?'collapsed':''}">
-          ${rounds.map(r => {
-            const rmatches = pool.matches.filter(m => m.round===r);
-            return `<div class="round-divider"><span class="round-divider-label">Round ${r}</span><div class="round-divider-line"></div></div>
-              ${rmatches.map(m => matchCard(m,'fp',pi,pool.matches.indexOf(m))).join('')}`;
-          }).join('')}
-        </div>
+      <div style="margin-bottom:${multiPool?'28px':'0'}">
+        ${multiPool ? `<div style="font-size:.8rem;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--gray-500);margin-bottom:10px">Pool ${pi+1}</div>` : ''}
+        ${rounds.map(r => {
+          const key = `fp-${pi}-r${r}`;
+          const col = S.collapsed[key];
+          const rmatches = pool.matches.filter(m => m.round === r);
+          const done = rmatches.filter(m => m.completed).length;
+          return `
+            <div>
+              <div class="pool-header ${col?'collapsed':''}" onclick="togglePool('${key}')">
+                <span>Round ${r}</span>
+                <span>${done}/${rmatches.length} complete <i class="chevron">▾</i></span>
+              </div>
+              <div class="pool-body ${col?'collapsed':''}">
+                ${rmatches.map(m => matchCard(m,'fp',pi,pool.matches.indexOf(m))).join('')}
+              </div>
+            </div>`;
+        }).join('')}
       </div>`;
   }).join('') + sessionBar();
 }
@@ -757,9 +762,9 @@ function matchCard(match, type, groupIdx, matchIdx) {
         </div>
       </div>
       <div class="score-row">
-        ${(type === 'foc' ? [0] : [0,1,2]).map(gi => {
+        ${[0].map(gi => {
           const s = match.scores[gi]||{};
-          const lbl = type === 'foc' ? '' : `G${gi+1} `;
+          const lbl = '';
           return `<div class="score-game">
             <div style="text-align:center">
               <div class="score-game-label">${lbl}Team A</div>
