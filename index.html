@@ -184,11 +184,6 @@ pre{font-family:Menlo,Consolas,monospace;font-size:.72rem;overflow-x:auto;backgr
       <div class="tile-name">Event Setup</div>
       <div class="tile-desc">Set your event name and date for the night</div>
     </div>
-    <div class="tile tile-accent" onclick="navTile('players')">
-      <span class="tile-icon">👥</span>
-      <div class="tile-name">Players</div>
-      <div class="tile-desc">Import or manually add players and their DUPR IDs</div>
-    </div>
     <div class="tile tile-accent" onclick="navTile('foc')">
       <span class="tile-icon">
         <svg width="52" height="52" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -226,9 +221,9 @@ pre{font-family:Menlo,Consolas,monospace;font-size:.72rem;overflow-x:auto;backgr
     <div class="card-title">📋 Quick Start</div>
     <div class="alert alert-info">
       <strong>Step 1 — Event Setup:</strong> Enter your event name and date.<br>
-      <strong>Step 2 — Players:</strong> Import from CSV (Name, DUPR ID) — export your Google Sheet as CSV and upload it.<br>
-      <strong>Step 3 — Choose a format:</strong> Four on a Court (groups of 4, auto 3-match rotation) or Fixed Partner (registered teams, pool round robin).<br>
-      <strong>Step 4 — Export:</strong> Download the DUPR import CSV once all matches are complete.
+      <strong>Step 2 — Four on a Court:</strong> Upload a CSV (<em>Player Name, DUPR ID</em>) to import players, then generate groups.<br>
+      <strong>Step 2 — Fixed Partner:</strong> Upload a CSV (<em>Player 1, DUPR 1, Player 2, DUPR 2</em>) to register teams directly.<br>
+      <strong>Step 3 — Export:</strong> Download the DUPR import CSV once all matches are complete.
     </div>
   </div>
 </section>
@@ -257,40 +252,6 @@ pre{font-family:Menlo,Consolas,monospace;font-size:.72rem;overflow-x:auto;backgr
   </div>
 </section>
 
-<!-- ========== PLAYERS ========== -->
-<section id="tab-players" class="section">
-  <div class="card">
-    <div class="card-title">📥 Import Players from CSV</div>
-    <div class="alert alert-info">
-      Your CSV must have two columns: <strong>Player Name</strong> and <strong>DUPR ID</strong>.<br>
-      From Google Sheets: <em>File → Download → Comma Separated Values (.csv)</em>
-    </div>
-    <div class="form-group">
-      <label>Upload Player CSV</label>
-      <input type="file" id="playerCsv" accept=".csv" onchange="importCSV(event)" style="padding:8px">
-    </div>
-    <div style="text-align:center;color:var(--gray-500);margin:6px 0;font-size:.85rem">— or add manually —</div>
-    <div class="form-row">
-      <div class="form-group">
-        <label>Full Name</label>
-        <input type="text" id="addName" placeholder="First Last">
-      </div>
-      <div class="form-group">
-        <label>DUPR ID</label>
-        <input type="text" id="addDupr" placeholder="e.g. BK5V6D">
-      </div>
-    </div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
-      <button class="btn btn-primary" onclick="addPlayer()">+ Add Player</button>
-      <button class="btn btn-danger btn-sm" onclick="clearPlayers()" style="margin-left:auto">Clear All</button>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-title">👥 Player List — <span id="playerCount">0</span> players</div>
-    <div id="playerTableWrap"><div class="empty-state">No players yet. Import a CSV or add manually above.</div></div>
-  </div>
-</section>
-
 <!-- ========== FOUR ON A COURT ========== -->
 <section id="tab-foc" class="section">
   <div class="inner-tabs">
@@ -300,7 +261,37 @@ pre{font-family:Menlo,Consolas,monospace;font-size:.72rem;overflow-x:auto;backgr
 
   <div id="foc-setup" class="inner-section active">
     <div class="card">
-      <div class="card-title">🏓 Four on a Court — Group Setup</div>
+      <div class="card-title">📥 Import Players</div>
+      <div class="alert alert-info">
+        CSV format: <strong>Player Name, DUPR ID</strong> — one player per row.<br>
+        Export your Google Sheet as CSV and upload it here.
+      </div>
+      <div class="form-group">
+        <label>Upload Player CSV</label>
+        <input type="file" id="playerCsv" accept=".csv" onchange="importCSV(event)" style="padding:8px">
+      </div>
+      <div style="text-align:center;color:var(--gray-500);margin:6px 0;font-size:.85rem">— or add manually —</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Full Name</label>
+          <input type="text" id="addName" placeholder="First Last">
+        </div>
+        <div class="form-group">
+          <label>DUPR ID</label>
+          <input type="text" id="addDupr" placeholder="e.g. BK5V6D">
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <button class="btn btn-primary" onclick="addPlayer()">+ Add Player</button>
+        <button class="btn btn-danger btn-sm" onclick="clearPlayers()" style="margin-left:auto">Clear All</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">👥 Player List — <span id="playerCount">0</span> players</div>
+      <div id="playerTableWrap"><div class="empty-state">No players yet.</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">🏓 Group Setup</div>
       <div class="alert alert-info">
         Assign exactly 4 players per group. Three matches are auto-generated covering every partner combination:<br>
         <strong>Match 1:</strong> P1&amp;P2 vs P3&amp;P4 &nbsp;|&nbsp; <strong>Match 2:</strong> P1&amp;P3 vs P2&amp;P4 &nbsp;|&nbsp; <strong>Match 3:</strong> P1&amp;P4 vs P2&amp;P3
@@ -427,8 +418,7 @@ function showTab(name) {
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   document.getElementById('tab-' + name).classList.add('active');
   document.getElementById('backBtn').style.display = name === 'home' ? 'none' : 'inline-flex';
-  if (name === 'players') renderPlayerTable();
-  if (name === 'foc') updateFocGroupDefault();
+  if (name === 'foc') { renderPlayerTable(); updateFocGroupDefault(); }
   if (name === 'fp') populateFpSelects();
   if (name === 'export') renderExport();
 }
