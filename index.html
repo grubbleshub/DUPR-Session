@@ -418,6 +418,7 @@ function showTab(name) {
   document.getElementById('tab-' + name).classList.add('active');
   document.getElementById('backBtn').style.display = name === 'home' ? 'none' : 'inline-flex';
   if (name === 'players') renderPlayerTable();
+  if (name === 'foc') updateFocGroupDefault();
   if (name === 'fp') populateFpSelects();
   if (name === 'export') renderExport();
 }
@@ -514,6 +515,10 @@ function renderPlayerTable() {
 }
 
 // ─── FOUR ON A COURT ──────────────────────────────────────────────────────────
+function updateFocGroupDefault() {
+  const suggested = S.players.length > 0 ? Math.ceil(S.players.length / 4) : 1;
+  document.getElementById('focGroups').value = suggested;
+}
 function initFocGroups() {
   const n = Math.max(1, parseInt(document.getElementById('focGroups').value)||1);
   S.foc.groups = Array.from({length:n}, () => ({ players:[null,null,null,null], matches:[] }));
