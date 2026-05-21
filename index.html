@@ -96,8 +96,21 @@ tr:hover td{background:var(--gray-100)}
 .badge-green{background:#dcfce7;color:#166534}
 
 /* POOL BLOCKS */
-.pool-header{background:var(--blue-darker);color:#fff;padding:10px 16px;border-radius:var(--radius) var(--radius) 0 0;font-weight:700;display:flex;align-items:center;justify-content:space-between;font-size:.9rem}
-.pool-body{border:2px solid var(--blue-darker);border-top:none;border-radius:0 0 var(--radius) var(--radius);padding:16px;margin-bottom:20px}
+.pool-header{background:var(--blue-darker);color:#fff;padding:10px 16px;border-radius:var(--radius) var(--radius) 0 0;font-weight:700;display:flex;align-items:center;justify-content:space-between;font-size:.9rem;cursor:pointer;user-select:none}
+.pool-header:hover{background:var(--blue-dark)}
+.pool-header .chevron{transition:transform .22s;font-style:normal;margin-left:8px;opacity:.8}
+.pool-header.collapsed .chevron{transform:rotate(-90deg)}
+.pool-body{border:2px solid var(--blue-darker);border-top:none;border-radius:0 0 var(--radius) var(--radius);padding:16px;margin-bottom:20px;transition:all .2s}
+.pool-body.collapsed{display:none}
+
+/* SESSION ACTIONS */
+.session-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:#fff;border-radius:var(--radius-lg);box-shadow:var(--shadow);padding:18px 22px;margin-top:8px;margin-bottom:20px}
+.session-bar .spacer{flex:1}
+.locked-banner{background:#1a3a1a;color:#86efac;border-radius:var(--radius);padding:10px 16px;font-size:.88rem;font-weight:700;display:flex;align-items:center;gap:8px}
+
+/* LOCKED STATE */
+.locked .score-input{pointer-events:none;opacity:.55;background:var(--gray-100)}
+.locked .btn-primary,.locked .btn-secondary{pointer-events:none;opacity:.4}
 
 /* MATCH CARDS */
 .match-card{border:1.5px solid var(--gray-200);border-radius:var(--radius);padding:14px;margin-bottom:10px;transition:border-color .18s,background .18s}
@@ -391,7 +404,9 @@ const S = {
   event: { name: 'Moreton City Pickleball DUPR Session', date: '' },
   players: [],
   foc: { groups: [] },
-  fp: { teams: [], pools: [], courts: 2 }
+  fp: { teams: [], pools: [], courts: 2 },
+  locked: false,
+  collapsed: {}   // keyed by "type-groupIdx" → true/false
 };
 
 document.getElementById('eventDate').value = new Date().toISOString().slice(0,10);
@@ -553,16 +568,20 @@ function generateFocSchedule() {
 function renderFocMatches() {
   const area = document.getElementById('focMatchArea');
   if (!S.foc.groups.length) { area.innerHTML = '<div class="empty-state">Set up groups first.</div>'; return; }
-  area.innerHTML = S.foc.groups.map((g, gi) => `
+  area.innerHTML = S.foc.groups.map((g, gi) => {
+    const key = `foc-${gi}`;
+    const col = S.collapsed[key];
+    return `
     <div>
-      <div class="pool-header">
+      <div class="pool-header ${col?'collapsed':''}" onclick="togglePool('${key}')">
         <span>🏓 Group ${gi+1} — Court ${gi+1}</span>
-        <span>${g.matches.filter(m=>m.completed).length}/${g.matches.length} complete</span>
+        <span>${g.matches.filter(m=>m.completed).length}/${g.matches.length} complete <i class="chevron">▾</i></span>
       </div>
-      <div class="pool-body">
+      <div class="pool-body ${col?'collapsed':''}">
         ${g.matches.map((m,mi) => matchCard(m,'foc',gi,mi)).join('')}
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('') + sessionBar();
 }
 
 // ─── FIXED PARTNER ────────────────────────────────────────────────────────────
@@ -659,14 +678,16 @@ function renderFpMatches() {
   const area = document.getElementById('fpMatchArea');
   if (!S.fp.pools.length) { area.innerHTML = '<div class="empty-state">Generate a schedule first.</div>'; return; }
   area.innerHTML = S.fp.pools.map((pool, pi) => {
+    const key = `fp-${pi}`;
+    const col = S.collapsed[key];
     const rounds = [...new Set(pool.matches.map(m=>m.round))].sort((a,b)=>a-b);
     return `
       <div>
-        <div class="pool-header">
+        <div class="pool-header ${col?'collapsed':''}" onclick="togglePool('${key}')">
           <span>Pool ${pi+1}</span>
-          <span>${pool.matches.filter(m=>m.completed).length}/${pool.matches.length} complete</span>
+          <span>${pool.matches.filter(m=>m.completed).length}/${pool.matches.length} complete <i class="chevron">▾</i></span>
         </div>
-        <div class="pool-body">
+        <div class="pool-body ${col?'collapsed':''}">
           ${rounds.map(r => {
             const rmatches = pool.matches.filter(m => m.round===r);
             return `<div class="round-divider"><span class="round-divider-label">Round ${r}</span><div class="round-divider-line"></div></div>
@@ -674,14 +695,15 @@ function renderFpMatches() {
           }).join('')}
         </div>
       </div>`;
-  }).join('');
+  }).join('') + sessionBar();
 }
 
 // ─── MATCH CARD ───────────────────────────────────────────────────────────────
 function matchCard(match, type, groupIdx, matchIdx) {
   const done = match.completed;
+  const locked = S.locked;
   return `
-    <div class="match-card ${done?'completed':''}" id="mc-${type}-${groupIdx}-${matchIdx}">
+    <div class="match-card ${done?'completed':''} ${locked?'locked':''}" id="mc-${type}-${groupIdx}-${matchIdx}">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
         <span class="badge ${done?'badge-green':'badge-gray'}">${done?'✓ Complete':'Round '+match.round}</span>
         <span class="court-tag">Court ${match.court}</span>
@@ -789,6 +811,60 @@ function renderExport() {
   document.getElementById('csvPreview').textContent=all.length
     ?toCSV(all.slice(0,8))+(all.length>8?'\n…':'')
     :'No completed matches yet.';
+}
+
+// ─── SESSION CONTROLS ─────────────────────────────────────────────────────────
+function togglePool(key) {
+  S.collapsed[key] = !S.collapsed[key];
+  if (key.startsWith('foc')) renderFocMatches();
+  else renderFpMatches();
+}
+
+function sessionBar() {
+  if (S.locked) {
+    return `<div class="session-bar">
+      <div class="locked-banner">🔒 Session finished — no further edits allowed</div>
+      <div class="spacer"></div>
+      <button class="btn btn-secondary" onclick="unlockSession()">↩ Unlock Session</button>
+    </div>`;
+  }
+  return `<div class="session-bar">
+    <button class="btn btn-danger" onclick="clearSession()">🗑 Clear Session</button>
+    <div class="spacer"></div>
+    <button class="btn btn-yellow" style="font-size:.95rem;padding:12px 24px" onclick="finishSession()">🔒 Finish Session</button>
+  </div>`;
+}
+
+function finishSession() {
+  if (!confirm('Finish session? Score editing will be locked. You can unlock it again if needed.')) return;
+  S.locked = true;
+  renderFocMatches();
+  renderFpMatches();
+  toast('Session finished — scores locked.');
+}
+
+function unlockSession() {
+  S.locked = false;
+  renderFocMatches();
+  renderFpMatches();
+  toast('Session unlocked.');
+}
+
+function clearSession() {
+  if (!confirm('Clear all session data? This will remove all players, groups, teams, matches and scores.')) return;
+  S.players = [];
+  S.foc.groups = [];
+  S.fp.teams = [];
+  S.fp.pools = [];
+  S.locked = false;
+  S.collapsed = {};
+  renderFocMatches();
+  renderFpMatches();
+  renderPlayerTable();
+  renderTeamList();
+  document.getElementById('focGroupCards').innerHTML = '';
+  document.getElementById('focGenBtn').style.display = 'none';
+  toast('Session cleared.');
 }
 
 // ─── UTILS ────────────────────────────────────────────────────────────────────
