@@ -210,10 +210,10 @@ pre{font-family:Menlo,Consolas,monospace;font-size:.72rem;overflow-x:auto;backgr
       <div class="tile-name">Fixed Partner</div>
       <div class="tile-desc">Fixed doubles teams in pool-based round robin — no finals</div>
     </div>
-    <div class="tile tile-accent" onclick="navTile('export')">
-      <span class="tile-icon">📤</span>
-      <div class="tile-name">Export CSV</div>
-      <div class="tile-desc">Download completed matches as a DUPR import-ready CSV</div>
+    <div class="tile tile-accent" onclick="navTile('shuffle')">
+      <span class="tile-icon">🔀</span>
+      <div class="tile-name">Random Shuffle</div>
+      <div class="tile-desc">Randomly assign players to courts each round — new partners every game</div>
     </div>
   </div>
 
@@ -221,9 +221,10 @@ pre{font-family:Menlo,Consolas,monospace;font-size:.72rem;overflow-x:auto;backgr
     <div class="card-title">📋 Quick Start</div>
     <div class="alert alert-info">
       <strong>Step 1 — Event Setup:</strong> Enter your event name and date.<br>
-      <strong>Step 2 — Four on a Court:</strong> Upload a CSV (<em>Player Name, DUPR ID</em>) to import players, then generate groups.<br>
-      <strong>Step 2 — Fixed Partner:</strong> Upload a CSV (<em>Player 1, DUPR 1, Player 2, DUPR 2</em>) to register teams directly.<br>
-      <strong>Step 3 — Export:</strong> Download the DUPR import CSV once all matches are complete.
+      <strong>Four on a Court:</strong> Upload CSV (<em>Player Name, DUPR ID</em>), auto-assign groups of 4, record 3 rotation matches.<br>
+      <strong>Fixed Partner:</strong> Upload CSV (<em>Player 1, DUPR 1, Player 2, DUPR 2</em>), run pool round robins.<br>
+      <strong>Random Shuffle:</strong> Upload CSV (<em>Player Name, DUPR ID</em>), set courts &amp; rounds, players shuffle randomly each round.<br>
+      <strong>Export:</strong> Each session has its own Export CSV button in the score recording screen.
     </div>
   </div>
 </section>
@@ -376,24 +377,64 @@ pre{font-family:Menlo,Consolas,monospace;font-size:.72rem;overflow-x:auto;backgr
   </div>
 </section>
 
-<!-- ========== EXPORT ========== -->
-<section id="tab-export" class="section">
-  <div class="card">
-    <div class="card-title">📤 Export DUPR Import CSV</div>
-    <div class="alert alert-info">
-      Only <strong>completed</strong> matches are exported. At minimum Game 1 scores must be recorded.<br>
-      The CSV format matches the DUPR import template exactly. Remove header rows as per DUPR instructions before importing.
+<!-- ========== RANDOM SHUFFLE ========== -->
+<section id="tab-shuffle" class="section">
+  <div class="inner-tabs">
+    <button class="inner-tab active" onclick="showInner('shuffle','setup',this)">1. Setup</button>
+    <button class="inner-tab" onclick="showInner('shuffle','play',this)">2. Record Scores</button>
+  </div>
+
+  <div id="shuffle-setup" class="inner-section active">
+    <div class="card">
+      <div class="card-title">📥 Import Players</div>
+      <div class="alert alert-info">
+        CSV format: <strong>Player Name, DUPR ID</strong> — one player per row.
+      </div>
+      <div class="form-group">
+        <label>Upload Player CSV</label>
+        <input type="file" id="shufflePlayerCsv" accept=".csv" onchange="importShuffleCSV(event)" style="padding:8px">
+      </div>
+      <div style="text-align:center;color:var(--gray-500);margin:6px 0;font-size:.85rem">— or add manually —</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Full Name</label>
+          <input type="text" id="shuffleAddName" placeholder="First Last">
+        </div>
+        <div class="form-group">
+          <label>DUPR ID</label>
+          <input type="text" id="shuffleAddDupr" placeholder="e.g. BK5V6D">
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <button class="btn btn-primary" onclick="addShufflePlayer()">+ Add Player</button>
+        <button class="btn btn-danger btn-sm" onclick="clearShufflePlayers()" style="margin-left:auto">Clear All</button>
+      </div>
     </div>
-    <div id="exportSummary" style="margin-bottom:16px"></div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap">
-      <button class="btn btn-primary" onclick="doExport('foc')">Export Four on a Court</button>
-      <button class="btn btn-primary" onclick="doExport('fp')">Export Fixed Partner</button>
-      <button class="btn btn-secondary" onclick="doExport('all')">Export All Matches</button>
+    <div class="card">
+      <div class="card-title">👥 Player List — <span id="shufflePlayerCount">0</span> players</div>
+      <div id="shufflePlayerTableWrap"><div class="empty-state">No players yet.</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">🔀 Configure Shuffle</div>
+      <div class="alert alert-info">
+        Each round randomly pairs players into teams of 2 and assigns them to courts. Players get new partners every round.
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Courts Available</label>
+          <input type="number" id="shuffleCourts" min="1" max="20" value="2">
+        </div>
+        <div class="form-group">
+          <label>Number of Rounds</label>
+          <input type="number" id="shuffleRoundCount" min="1" max="20" value="3">
+        </div>
+      </div>
+      <button class="btn btn-yellow" style="font-size:1rem;padding:14px 28px" onclick="generateShuffle()">Generate Random Schedule →</button>
     </div>
   </div>
-  <div class="card">
-    <div class="card-title">Preview (first 8 rows)</div>
-    <pre id="csvPreview">No completed matches yet.</pre>
+
+  <div id="shuffle-play" class="inner-section">
+    <div id="shuffleMatchArea"><div class="empty-state">Generate a schedule first.</div></div>
   </div>
 </section>
 
@@ -406,8 +447,9 @@ const S = {
   players: [],
   foc: { groups: [] },
   fp: { teams: [], pools: [], courts: 2 },
+  shuffle: { players: [], rounds: [], courts: 2, roundCount: 3 },
   locked: false,
-  collapsed: {}   // keyed by "type-groupIdx" → true/false
+  collapsed: {}
 };
 
 document.getElementById('eventDate').value = new Date().toISOString().slice(0,10);
@@ -420,7 +462,6 @@ function showTab(name) {
   document.getElementById('backBtn').style.display = name === 'home' ? 'none' : 'inline-flex';
   if (name === 'foc') { renderPlayerTable(); updateFocGroupDefault(); }
   if (name === 'fp') populateFpSelects();
-  if (name === 'export') renderExport();
 }
 
 function navTile(name) { showTab(name); }
@@ -586,7 +627,7 @@ function renderFocMatches() {
         ${g.matches.map((m,mi) => matchCard(m,'foc',gi,mi)).join('')}
       </div>
     </div>`;
-  }).join('') + sessionBar();
+  }).join('') + sessionBar('foc');
 }
 
 // ─── FIXED PARTNER ────────────────────────────────────────────────────────────
@@ -737,7 +778,7 @@ function renderFpMatches() {
             </div>`;
         }).join('')}
       </div>`;
-  }).join('') + sessionBar();
+  }).join('') + sessionBar('fp');
 }
 
 // ─── MATCH CARD ───────────────────────────────────────────────────────────────
@@ -790,7 +831,9 @@ function matchCard(match, type, groupIdx, matchIdx) {
 }
 
 function getMatch(type, gi, mi) {
-  return type==='foc' ? S.foc.groups[gi].matches[mi] : S.fp.pools[gi].matches[mi];
+  if (type==='foc') return S.foc.groups[gi].matches[mi];
+  if (type==='fp')  return S.fp.pools[gi].matches[mi];
+  return S.shuffle.rounds[gi].matches[mi];
 }
 
 function setScore(type, gi, mi, gameIdx, team, val) {
@@ -808,7 +851,8 @@ function toggleDone(type, gi, mi) {
     m.completed = true;
   } else { m.completed = false; }
   if (type==='foc') renderFocMatches();
-  else renderFpMatches();
+  else if (type==='fp') renderFpMatches();
+  else renderShuffleMatches();
 }
 
 // ─── EXPORT ───────────────────────────────────────────────────────────────────
@@ -824,6 +868,7 @@ function buildRows(type) {
   }
   if (type==='foc'||type==='all') S.foc.groups.forEach(g=>g.matches.filter(m=>m.completed).forEach(m=>row(m.teamA,m.teamB,m.scores)));
   if (type==='fp'||type==='all') S.fp.pools.forEach(pool=>pool.matches.filter(m=>m.completed).forEach(m=>row(m.teamA,m.teamB,m.scores)));
+  if (type==='shuffle'||type==='all') S.shuffle.rounds.forEach(r=>r.matches.filter(m=>m.completed).forEach(m=>row(m.teamA,m.teamB,m.scores)));
   return rows;
 }
 
@@ -842,37 +887,28 @@ function doExport(type) {
   toast(`Exported ${rows.length} match row(s).`);
 }
 
-function renderExport() {
-  const focN=buildRows('foc').length, fpN=buildRows('fp').length, all=buildRows('all');
-  document.getElementById('exportSummary').innerHTML=`
-    <div class="alert alert-${all.length?'success':'warning'}">
-      <strong>${all.length}</strong> completed match(es) ready.
-      &nbsp;|&nbsp; Four on a Court: <strong>${focN}</strong>
-      &nbsp;|&nbsp; Fixed Partner: <strong>${fpN}</strong>
-    </div>`;
-  document.getElementById('csvPreview').textContent=all.length
-    ?toCSV(all.slice(0,8))+(all.length>8?'\n…':'')
-    :'No completed matches yet.';
-}
-
 // ─── SESSION CONTROLS ─────────────────────────────────────────────────────────
 function togglePool(key) {
   S.collapsed[key] = !S.collapsed[key];
   if (key.startsWith('foc')) renderFocMatches();
-  else renderFpMatches();
+  else if (key.startsWith('fp')) renderFpMatches();
+  else renderShuffleMatches();
 }
 
-function sessionBar() {
+function sessionBar(type) {
+  const exportBtn = `<button class="btn btn-secondary" onclick="doExport('${type}')">📤 Export CSV</button>`;
   if (S.locked) {
     return `<div class="session-bar">
       <div class="locked-banner">🔒 Session finished — no further edits allowed</div>
       <div class="spacer"></div>
-      <button class="btn btn-secondary" onclick="unlockSession()">↩ Unlock Session</button>
+      ${exportBtn}
+      <button class="btn btn-secondary" onclick="unlockSession()">↩ Unlock</button>
     </div>`;
   }
   return `<div class="session-bar">
     <button class="btn btn-danger" onclick="clearSession()">🗑 Clear Session</button>
     <div class="spacer"></div>
+    ${exportBtn}
     <button class="btn btn-yellow" style="font-size:.95rem;padding:12px 24px" onclick="finishSession()">🔒 Finish Session</button>
   </div>`;
 }
@@ -880,33 +916,143 @@ function sessionBar() {
 function finishSession() {
   if (!confirm('Finish session? Score editing will be locked. You can unlock it again if needed.')) return;
   S.locked = true;
-  renderFocMatches();
-  renderFpMatches();
+  renderFocMatches(); renderFpMatches(); renderShuffleMatches();
   toast('Session finished — scores locked.');
 }
 
 function unlockSession() {
   S.locked = false;
-  renderFocMatches();
-  renderFpMatches();
+  renderFocMatches(); renderFpMatches(); renderShuffleMatches();
   toast('Session unlocked.');
 }
 
 function clearSession() {
   if (!confirm('Clear all session data? This will remove all players, groups, teams, matches and scores.')) return;
-  S.players = [];
-  S.foc.groups = [];
-  S.fp.teams = [];
-  S.fp.pools = [];
-  S.locked = false;
-  S.collapsed = {};
-  renderFocMatches();
-  renderFpMatches();
-  renderPlayerTable();
-  renderTeamList();
+  S.players = []; S.foc.groups = []; S.fp.teams = []; S.fp.pools = [];
+  S.shuffle.players = []; S.shuffle.rounds = [];
+  S.locked = false; S.collapsed = {};
+  renderFocMatches(); renderFpMatches(); renderShuffleMatches();
+  renderPlayerTable(); renderTeamList(); renderShufflePlayerTable();
   document.getElementById('focGroupCards').innerHTML = '';
   document.getElementById('focGenBtn').style.display = 'none';
   toast('Session cleared.');
+}
+
+// ─── RANDOM SHUFFLE ───────────────────────────────────────────────────────────
+function importShuffleCSV(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const lines = ev.target.result.split(/\r?\n/).filter(l => l.trim());
+    let added = 0;
+    lines.forEach((line, i) => {
+      const cols = parseLine(line);
+      const raw0 = (cols[0]||'').trim().replace(/^["']|["']$/g,'');
+      if (i === 0 && /name|player/i.test(raw0)) return;
+      const name = raw0;
+      const duprId = (cols[1]||'').trim().replace(/^["']|["']$/g,'');
+      if (name && duprId && !S.shuffle.players.find(p => p.duprId === duprId)) {
+        S.shuffle.players.push({ id: uid(), name, duprId }); added++;
+      }
+    });
+    renderShufflePlayerTable();
+    toast(`Imported ${added} player(s).`);
+    e.target.value = '';
+  };
+  reader.readAsText(file);
+}
+
+function addShufflePlayer() {
+  const name = document.getElementById('shuffleAddName').value.trim();
+  const duprId = document.getElementById('shuffleAddDupr').value.trim();
+  if (!name || !duprId) { toast('Enter both name and DUPR ID.'); return; }
+  if (S.shuffle.players.find(p => p.duprId === duprId)) { toast('DUPR ID already exists.'); return; }
+  S.shuffle.players.push({ id: uid(), name, duprId });
+  document.getElementById('shuffleAddName').value = '';
+  document.getElementById('shuffleAddDupr').value = '';
+  renderShufflePlayerTable();
+}
+
+function removeShufflePlayer(id) {
+  S.shuffle.players = S.shuffle.players.filter(p => p.id !== id);
+  renderShufflePlayerTable();
+}
+
+function clearShufflePlayers() {
+  if (!confirm('Clear all shuffle players?')) return;
+  S.shuffle.players = []; renderShufflePlayerTable();
+}
+
+function renderShufflePlayerTable() {
+  const count = S.shuffle.players.length;
+  document.getElementById('shufflePlayerCount').textContent = count;
+  const w = document.getElementById('shufflePlayerTableWrap');
+  if (!count) { w.innerHTML = '<div class="empty-state">No players yet.</div>'; return; }
+  w.innerHTML = `<table>
+    <thead><tr><th>#</th><th>Name</th><th>DUPR ID</th><th></th></tr></thead>
+    <tbody>${S.shuffle.players.map((p,i) => `
+      <tr>
+        <td style="text-align:center;color:var(--gray-500)">${i+1}</td>
+        <td><strong>${esc(p.name)}</strong></td>
+        <td><code style="font-size:.85rem;background:var(--blue-light);padding:2px 7px;border-radius:4px">${esc(p.duprId)}</code></td>
+        <td><button class="btn btn-danger btn-sm" onclick="removeShufflePlayer(${p.id})">✕</button></td>
+      </tr>`).join('')}
+    </tbody></table>`;
+}
+
+function shuffleArray(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function generateShuffle() {
+  const courts = Math.max(1, parseInt(document.getElementById('shuffleCourts').value)||2);
+  const roundCount = Math.max(1, parseInt(document.getElementById('shuffleRoundCount').value)||3);
+  if (S.shuffle.players.length < 4) { toast('Need at least 4 players.'); return; }
+  S.shuffle.courts = courts;
+  S.shuffle.roundCount = roundCount;
+  S.shuffle.rounds = [];
+  for (let r = 0; r < roundCount; r++) {
+    const shuffled = shuffleArray(S.shuffle.players);
+    const matches = [];
+    let courtNum = 1;
+    for (let i = 0; i + 3 < shuffled.length && courtNum <= courts; i += 4) {
+      matches.push({
+        teamA: [shuffled[i], shuffled[i+1]],
+        teamB: [shuffled[i+2], shuffled[i+3]],
+        court: courtNum++, round: r + 1,
+        scores: [], completed: false
+      });
+    }
+    S.shuffle.rounds.push({ round: r + 1, matches });
+  }
+  renderShuffleMatches();
+  showInner('shuffle', 'play', document.querySelector('#tab-shuffle .inner-tab:nth-child(2)'));
+  toast('Random schedule generated!');
+}
+
+function renderShuffleMatches() {
+  const area = document.getElementById('shuffleMatchArea');
+  if (!S.shuffle.rounds.length) { area.innerHTML = '<div class="empty-state">Generate a schedule first.</div>'; return; }
+  area.innerHTML = S.shuffle.rounds.map((rd, ri) => {
+    const key = `shuffle-r${ri}`;
+    const col = S.collapsed[key];
+    const done = rd.matches.filter(m => m.completed).length;
+    return `
+      <div>
+        <div class="pool-header ${col?'collapsed':''}" onclick="togglePool('${key}')">
+          <span>Round ${rd.round}</span>
+          <span>${done}/${rd.matches.length} complete <i class="chevron">▾</i></span>
+        </div>
+        <div class="pool-body ${col?'collapsed':''}">
+          ${rd.matches.map((m,mi) => matchCard(m,'shuffle',ri,mi)).join('')}
+        </div>
+      </div>`;
+  }).join('') + sessionBar('shuffle');
 }
 
 // ─── UTILS ────────────────────────────────────────────────────────────────────
