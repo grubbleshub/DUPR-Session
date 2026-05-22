@@ -150,6 +150,11 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 .round-divider-label{font-weight:800;font-size:.85rem;color:var(--blue-darker);white-space:nowrap}
 .round-divider-line{flex:1;height:1px;background:var(--gray-200)}
 .court-tag{display:inline-flex;align-items:center;gap:4px;background:var(--blue-darker);color:#fff;padding:2px 9px;border-radius:4px;font-size:.73rem;font-weight:800}
+.court-header{background:var(--blue-light);color:var(--blue-darker);padding:8px 14px;border-radius:var(--radius) var(--radius) 0 0;font-weight:700;display:flex;align-items:center;justify-content:space-between;font-size:.85rem;cursor:pointer;user-select:none;margin-top:10px}
+.court-header:hover{filter:brightness(.95)}
+.court-header.collapsed .chevron{transform:rotate(-90deg)}
+.court-body{border:1.5px solid var(--blue-light);border-top:none;border-radius:0 0 var(--radius) var(--radius);padding:12px;margin-bottom:4px}
+.court-body.collapsed{display:none}
 pre{font-family:Menlo,Consolas,monospace;font-size:.72rem;overflow-x:auto;background:#f5f5f5;padding:14px;border-radius:8px;color:#333;white-space:pre;line-height:1.5}
 
 /* TOAST */
@@ -292,20 +297,22 @@ pre{font-family:Menlo,Consolas,monospace;font-size:.72rem;overflow-x:auto;backgr
       <div id="playerTableWrap"><div class="empty-state">No players yet.</div></div>
     </div>
     <div class="card">
-      <div class="card-title">🏓 Group Setup</div>
+      <div class="card-title">🏓 Court Setup</div>
       <div class="alert alert-info">
-        Assign exactly 4 players per group. Three matches are auto-generated covering every partner combination:<br>
+        Players are randomly shuffled into courts of 4 each round. Within each court, three matches cover every partner combination:<br>
         <strong>Match 1:</strong> P1&amp;P2 vs P3&amp;P4 &nbsp;|&nbsp; <strong>Match 2:</strong> P1&amp;P3 vs P2&amp;P4 &nbsp;|&nbsp; <strong>Match 3:</strong> P1&amp;P4 vs P2&amp;P3
       </div>
-      <div class="form-group" style="max-width:200px">
-        <label>Number of Groups / Courts</label>
-        <input type="number" id="focGroups" min="1" max="20" value="1">
+      <div class="form-row" style="max-width:400px">
+        <div class="form-group">
+          <label>Number of Courts</label>
+          <input type="number" id="focCourts" min="1" max="20" value="1">
+        </div>
+        <div class="form-group">
+          <label>Number of Rounds</label>
+          <input type="number" id="focRounds" min="1" max="20" value="1">
+        </div>
       </div>
-      <button class="btn btn-primary" onclick="initFocGroups()">Create Groups</button>
-    </div>
-    <div id="focGroupCards"></div>
-    <div id="focGenBtn" style="display:none;margin-bottom:20px">
-      <button class="btn btn-yellow" style="font-size:1rem;padding:14px 28px" onclick="generateFocSchedule()">Generate Schedule &amp; Start Scoring →</button>
+      <button class="btn btn-yellow" style="font-size:1rem;padding:14px 28px" onclick="generateFocSchedule()">Generate Schedule →</button>
     </div>
   </div>
 
@@ -558,54 +565,31 @@ function renderPlayerTable() {
 // ─── FOUR ON A COURT ──────────────────────────────────────────────────────────
 function updateFocGroupDefault() {
   const suggested = S.players.length > 0 ? Math.ceil(S.players.length / 4) : 1;
-  document.getElementById('focGroups').value = suggested;
-}
-function initFocGroups() {
-  const n = Math.max(1, parseInt(document.getElementById('focGroups').value)||1);
-  S.foc.groups = Array.from({length:n}, () => ({ players:[null,null,null,null], matches:[] }));
-  // Auto-assign players sequentially: group 0 gets players 0-3, group 1 gets 4-7, etc.
-  S.players.forEach((p, i) => {
-    const gi = Math.floor(i / 4);
-    const pi = i % 4;
-    if (gi < n) S.foc.groups[gi].players[pi] = p;
-  });
-  renderFocGroupCards();
-  document.getElementById('focGenBtn').style.display = 'block';
-}
-
-function renderFocGroupCards() {
-  document.getElementById('focGroupCards').innerHTML = S.foc.groups.map((g,gi) => `
-    <div class="card">
-      <div class="card-title">Group ${gi+1} — Court ${gi+1}</div>
-      <div class="form-row" style="grid-template-columns:1fr 1fr">
-        ${[0,1,2,3].map(pi => `
-          <div class="form-group">
-            <label>Player ${pi+1}</label>
-            <select onchange="assignFocPlayer(${gi},${pi},this.value)">
-              <option value="">Select player…</option>
-              ${S.players.map(p => `<option value="${p.id}" ${g.players[pi]&&g.players[pi].id===p.id?'selected':''}>${esc(p.name)}</option>`).join('')}
-            </select>
-          </div>`).join('')}
-      </div>
-    </div>`).join('');
-}
-
-function assignFocPlayer(gi, pi, id) {
-  S.foc.groups[gi].players[pi] = S.players.find(p => p.id==id) || null;
+  document.getElementById('focCourts').value = suggested;
 }
 
 function generateFocSchedule() {
-  let ok = true;
-  S.foc.groups.forEach((g, gi) => {
-    if (g.players.some(p => !p)) { toast(`Group ${gi+1}: assign all 4 players.`); ok = false; return; }
-    const [p0,p1,p2,p3] = g.players;
-    g.matches = [
-      { teamA:[p0,p1], teamB:[p2,p3], scores:[], completed:false, round:1, court:gi+1 },
-      { teamA:[p0,p2], teamB:[p1,p3], scores:[], completed:false, round:2, court:gi+1 },
-      { teamA:[p0,p3], teamB:[p1,p2], scores:[], completed:false, round:3, court:gi+1 }
-    ];
-  });
-  if (!ok) return;
+  const courts = Math.max(1, parseInt(document.getElementById('focCourts').value)||1);
+  const rounds  = Math.max(1, parseInt(document.getElementById('focRounds').value)||1);
+  if (S.players.length < 4) { toast('Need at least 4 players.'); return; }
+  S.foc.groups = [];
+  for (let r = 0; r < rounds; r++) {
+    const shuffled = shuffleArray(S.players);
+    for (let c = 0; c < courts; c++) {
+      const slice = shuffled.slice(c * 4, c * 4 + 4);
+      if (slice.length < 4) break;
+      const [p0,p1,p2,p3] = slice;
+      S.foc.groups.push({
+        round: r + 1, court: c + 1,
+        players: slice,
+        matches: [
+          { teamA:[p0,p1], teamB:[p2,p3], scores:[], completed:false, round:r+1, court:c+1 },
+          { teamA:[p0,p2], teamB:[p1,p3], scores:[], completed:false, round:r+1, court:c+1 },
+          { teamA:[p0,p3], teamB:[p1,p2], scores:[], completed:false, round:r+1, court:c+1 }
+        ]
+      });
+    }
+  }
   renderFocMatches();
   showInner('foc','play', document.querySelector('#tab-foc .inner-tab:nth-child(2)'));
   toast('Schedule generated!');
@@ -613,20 +597,36 @@ function generateFocSchedule() {
 
 function renderFocMatches() {
   const area = document.getElementById('focMatchArea');
-  if (!S.foc.groups.length) { area.innerHTML = '<div class="empty-state">Set up groups first.</div>'; return; }
-  area.innerHTML = S.foc.groups.map((g, gi) => {
-    const key = `foc-${gi}`;
-    const col = S.collapsed[key];
+  if (!S.foc.groups.length) { area.innerHTML = '<div class="empty-state">Set up courts and generate the schedule first.</div>'; return; }
+  const roundNums = [...new Set(S.foc.groups.map(g => g.round))].sort((a,b) => a-b);
+  area.innerHTML = roundNums.map(r => {
+    const rKey = `foc-r${r}`;
+    const rCol = S.collapsed[rKey];
+    const courtsInRound = S.foc.groups.filter(g => g.round === r);
+    const totalDone  = courtsInRound.reduce((s,g) => s + g.matches.filter(m=>m.completed).length, 0);
+    const totalMatch = courtsInRound.reduce((s,g) => s + g.matches.length, 0);
     return `
-    <div>
-      <div class="pool-header ${col?'collapsed':''}" onclick="togglePool('${key}')">
-        <span>🏓 Group ${gi+1} — Court ${gi+1}</span>
-        <span>${g.matches.filter(m=>m.completed).length}/${g.matches.length} complete <i class="chevron">▾</i></span>
-      </div>
-      <div class="pool-body ${col?'collapsed':''}">
-        ${g.matches.map((m,mi) => matchCard(m,'foc',gi,mi)).join('')}
-      </div>
-    </div>`;
+      <div>
+        <div class="pool-header ${rCol?'collapsed':''}" onclick="togglePool('${rKey}')">
+          <span>Round ${r}</span>
+          <span>${totalDone}/${totalMatch} complete <i class="chevron">▾</i></span>
+        </div>
+        <div class="pool-body ${rCol?'collapsed':''}">
+          ${courtsInRound.map(g => {
+            const gi = S.foc.groups.indexOf(g);
+            const cKey = `foc-r${r}-c${g.court}`;
+            const cCol = S.collapsed[cKey];
+            return `
+              <div class="court-header ${cCol?'collapsed':''}" onclick="togglePool('${cKey}')">
+                <span>🏓 Court ${g.court}</span>
+                <span>${g.matches.filter(m=>m.completed).length}/${g.matches.length} complete <i class="chevron">▾</i></span>
+              </div>
+              <div class="court-body ${cCol?'collapsed':''}">
+                ${g.matches.map((m,mi) => matchCard(m,'foc',gi,mi)).join('')}
+              </div>`;
+          }).join('')}
+        </div>
+      </div>`;
   }).join('') + sessionBar('foc');
 }
 
@@ -933,8 +933,6 @@ function clearSession() {
   S.locked = false; S.collapsed = {};
   renderFocMatches(); renderFpMatches(); renderShuffleMatches();
   renderPlayerTable(); renderTeamList(); renderShufflePlayerTable();
-  document.getElementById('focGroupCards').innerHTML = '';
-  document.getElementById('focGenBtn').style.display = 'none';
   toast('Session cleared.');
 }
 
