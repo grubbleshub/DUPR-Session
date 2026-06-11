@@ -590,9 +590,14 @@ function generateFocSchedule() {
       });
     }
   }
-  // collapse all rounds by default
+  // collapse all rounds and courts by default
   const roundNums = [...new Set(S.foc.groups.map(g => g.round))];
-  roundNums.forEach(r => { S.collapsed[`foc-r${r}`] = true; });
+  roundNums.forEach(r => {
+    S.collapsed[`foc-r${r}`] = true;
+    S.foc.groups.filter(g => g.round === r).forEach(g => {
+      S.collapsed[`foc-r${r}-c${g.court}`] = true;
+    });
+  });
   renderFocMatches();
   showInner('foc','play', document.querySelector('#tab-foc .inner-tab:nth-child(2)'));
   toast('Schedule generated!');
@@ -720,6 +725,11 @@ function generateFpSchedule() {
   S.fp.teams.forEach((t, i) => pools[i % poolCount].teams.push(t));
   pools.forEach((pool, pi) => { pool.matches = roundRobin(pool.teams, courts, pi * 100); });
   S.fp.pools = pools;
+  // collapse all rounds by default
+  pools.forEach((pool, pi) => {
+    const rounds = [...new Set(pool.matches.map(m => m.round))];
+    rounds.forEach(r => { S.collapsed[`fp-${pi}-r${r}`] = true; });
+  });
   renderFpPoolPreview();
   renderFpMatches();
   showInner('fp', 'play', document.querySelector('#tab-fp .inner-tab:nth-child(3)'));
@@ -1045,6 +1055,8 @@ function generateShuffle() {
     }
     S.shuffle.rounds.push({ round: r + 1, matches });
   }
+  // collapse all rounds by default
+  S.shuffle.rounds.forEach((rd, ri) => { S.collapsed[`shuffle-r${ri}`] = true; });
   renderShuffleMatches();
   showInner('shuffle', 'play', document.querySelector('#tab-shuffle .inner-tab:nth-child(2)'));
   toast('Random schedule generated!');
