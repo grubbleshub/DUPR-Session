@@ -248,6 +248,19 @@ pre{font-family:Menlo,Consolas,monospace;font-size:.72rem;overflow-x:auto;backgr
         <input type="date" id="eventDate">
       </div>
     </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Score Type</label>
+        <select id="scoreType">
+          <option value="SIDEOUT">SIDEOUT</option>
+          <option value="RALLY">RALLY</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Location <span style="font-weight:400;color:var(--gray-500)">(optional)</span></label>
+        <input type="text" id="eventLocation" placeholder="e.g. Moreton Bay Sports Centre">
+      </div>
+    </div>
     <button class="btn btn-primary" onclick="saveEvent()">✓ Save Configuration</button>
   </div>
   <div class="card">
@@ -450,7 +463,7 @@ pre{font-family:Menlo,Consolas,monospace;font-size:.72rem;overflow-x:auto;backgr
 <script>
 // ─── STATE ────────────────────────────────────────────────────────────────────
 const S = {
-  event: { name: 'Moreton City Pickleball DUPR Session', date: '' },
+  event: { name: 'Moreton City Pickleball DUPR Session', date: '', scoreType: 'SIDEOUT', location: '' },
   players: [],
   foc: { groups: [] },
   fp: { teams: [], pools: [], courts: 2 },
@@ -485,8 +498,10 @@ function showInner(prefix, name, btn) {
 
 // ─── EVENT ────────────────────────────────────────────────────────────────────
 function saveEvent() {
-  S.event.name = document.getElementById('eventName').value.trim() || 'DUPR Night';
-  S.event.date = document.getElementById('eventDate').value || new Date().toISOString().slice(0,10);
+  S.event.name      = document.getElementById('eventName').value.trim() || 'DUPR Night';
+  S.event.date      = document.getElementById('eventDate').value || new Date().toISOString().slice(0,10);
+  S.event.scoreType = document.getElementById('scoreType').value;
+  S.event.location  = document.getElementById('eventLocation').value.trim();
   toast('Event configuration saved!');
 }
 
@@ -869,7 +884,7 @@ function toggleDone(type, gi, mi) {
 }
 
 // ─── EXPORT ───────────────────────────────────────────────────────────────────
-const DUPR_HEADER = ['','','','matchType','event','date','playerA1','playerA1DuprId','playerA1ExternalId','playerA2','playerA2DuprId','playerA2ExternalId','playerB1','playerB1DuprId','playerB1ExternalId','playerB2','playerB2DuprId','playerB2ExternalId','','teamAGame1','teamBGame1','teamAGame2','teamBGame2','teamAGame3','teamBGame3','teamAGame4','teamBGame4','teamAGame5','teamBGame5'];
+const DUPR_HEADER = ['matchType','event','date','playerA1','playerA1DuprId','playerA1ExternalId','playerA2','playerA2DuprId','playerA2ExternalId','playerB1','playerB1DuprId','playerB1ExternalId','playerB2','playerB2DuprId','playerB2ExternalId','teamAGame1','teamBGame1','teamAGame2','teamBGame2','teamAGame3','teamBGame3','teamAGame4','teamBGame4','teamAGame5','teamBGame5','location','scoreType'];
 
 function buildRows(type) {
   const rows = [DUPR_HEADER];
@@ -880,7 +895,7 @@ function buildRows(type) {
     // pad to 5 game pairs (10 columns) so data aligns with header
     const sc=[];
     for(let i=0;i<5;i++){const g=games[i];sc.push(g?g.a:'',g?g.b:'');}
-    rows.push(['','','','D',evt,dt,a1.name,a1.duprId,'',a2.name,a2.duprId,'',b1.name,b1.duprId,'',b2.name,b2.duprId,'','',...sc]);
+    rows.push(['D',evt,dt,a1.name,a1.duprId,'',a2.name,a2.duprId,'',b1.name,b1.duprId,'',b2.name,b2.duprId,'',...sc,S.event.location||'',S.event.scoreType||'SIDEOUT']);
   }
   if (type==='foc'||type==='all') S.foc.groups.forEach(g=>g.matches.filter(m=>m.completed).forEach(m=>row(m.teamA,m.teamB,m.scores)));
   if (type==='fp'||type==='all') S.fp.pools.forEach(pool=>pool.matches.filter(m=>m.completed).forEach(m=>row(m.teamA,m.teamB,m.scores)));
