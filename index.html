@@ -910,6 +910,7 @@ function sessionBar(type) {
   }
   return `<div class="session-bar">
     <button class="btn btn-danger" onclick="clearSession()">🗑 Clear Session</button>
+    <button class="btn btn-secondary btn-sm" onclick="fillDummyScores('${type}')" title="Fill all matches with random scores for testing">🎲 Dummy Scores</button>
     <div class="spacer"></div>
     ${exportBtn}
     <button class="btn btn-yellow" style="font-size:.95rem;padding:12px 24px" onclick="finishSession()">🔒 Finish Session</button>
@@ -937,6 +938,19 @@ function clearSession() {
   renderFocMatches(); renderFpMatches(); renderShuffleMatches();
   renderPlayerTable(); renderTeamList(); renderShufflePlayerTable();
   toast('Session cleared.');
+}
+
+function fillDummyScores(type) {
+  const rnd = () => Math.floor(Math.random() * 10);
+  const fakeScore = () => [{ a: 11, b: rnd() }];
+  const fill = matches => matches.forEach(m => { m.scores = fakeScore(); m.completed = true; });
+  if (type === 'foc') S.foc.groups.forEach(g => fill(g.matches));
+  if (type === 'fp')  S.fp.pools.forEach(p => fill(p.matches));
+  if (type === 'shuffle') S.shuffle.rounds.forEach(r => fill(r.matches));
+  if (type === 'foc') renderFocMatches();
+  else if (type === 'fp') renderFpMatches();
+  else renderShuffleMatches();
+  toast('Dummy scores filled — ready to test export.');
 }
 
 // ─── RANDOM SHUFFLE ───────────────────────────────────────────────────────────
