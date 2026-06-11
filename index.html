@@ -869,14 +869,17 @@ function toggleDone(type, gi, mi) {
 }
 
 // ─── EXPORT ───────────────────────────────────────────────────────────────────
+const DUPR_HEADER = ['','','','matchType','event','date','playerA1','playerA1DuprId','playerA1ExternalId','playerA2','playerA2DuprId','playerA2ExternalId','playerB1','playerB1DuprId','playerB1ExternalId','playerB2','playerB2DuprId','playerB2ExternalId','','teamAGame1','teamBGame1','teamAGame2','teamBGame2','teamAGame3','teamBGame3','teamAGame4','teamBGame4','teamAGame5','teamBGame5'];
+
 function buildRows(type) {
-  const rows = [];
+  const rows = [DUPR_HEADER];
   const evt = S.event.name, dt = S.event.date;
   function row(teamA, teamB, scores) {
     const [a1,a2]=teamA, [b1,b2]=teamB;
     const games=(scores||[]).filter(s=>s&&s.a!==undefined&&s.b!==undefined);
+    // pad to 5 game pairs (10 columns) so data aligns with header
     const sc=[];
-    games.forEach(g=>sc.push(g.a,g.b));
+    for(let i=0;i<5;i++){const g=games[i];sc.push(g?g.a:'',g?g.b:'');}
     rows.push(['','','','D',evt,dt,a1.name,a1.duprId,'',a2.name,a2.duprId,'',b1.name,b1.duprId,'',b2.name,b2.duprId,'','',...sc]);
   }
   if (type==='foc'||type==='all') S.foc.groups.forEach(g=>g.matches.filter(m=>m.completed).forEach(m=>row(m.teamA,m.teamB,m.scores)));
@@ -891,7 +894,7 @@ function toCSV(rows) {
 
 function doExport(type) {
   const rows = buildRows(type);
-  if (!rows.length) { toast('No completed matches to export.'); return; }
+  if (rows.length <= 1) { toast('No completed matches to export.'); return; }
   const blob = new Blob([toCSV(rows)],{type:'text/csv'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
