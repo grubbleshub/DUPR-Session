@@ -584,16 +584,17 @@ pre{font-family:Menlo,Consolas,monospace;font-size:.72rem;overflow-x:auto;backgr
 //  3. In Firebase console go to Realtime Database → Create database (test mode)
 //  4. Replace null below with your config object and save the file
 // ══════════════════════════════════════════════════════════════════════════════
-const FIREBASE_CONFIG = null;
-// const FIREBASE_CONFIG = {
-//   apiKey: "AIza...",
-//   authDomain: "your-project.firebaseapp.com",
-//   databaseURL: "https://your-project-default-rtdb.firebaseio.com",
-//   projectId: "your-project",
-//   storageBucket: "your-project.appspot.com",
-//   messagingSenderId: "000000000000",
-//   appId: "1:000000000000:web:abc123"
-// };
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyD8a-fTIRjASO2eRzmY3KNOvkgXFmZwqLs",
+  authDomain: "mcp-dupr-session.firebaseapp.com",
+  // databaseURL is required for Realtime Database — derived from your project ID.
+  // If you chose a non-US region when creating the database, update this URL.
+  databaseURL: "https://mcp-dupr-session-default-rtdb.firebaseio.com",
+  projectId: "mcp-dupr-session",
+  storageBucket: "mcp-dupr-session.firebasestorage.app",
+  messagingSenderId: "227381680504",
+  appId: "1:227381680504:web:3d45f044523c84997e508d"
+};
 
 // ─── STATE ────────────────────────────────────────────────────────────────────
 const S = {
@@ -1527,7 +1528,7 @@ function toast(msg){
 }
 </script>
 <!-- Firebase SDKs — loaded last so they don't block rendering -->
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-database-compat.js"></script>
 </body>
 </html>
