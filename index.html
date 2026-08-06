@@ -1432,8 +1432,9 @@ function initFirebase() {
     setSyncDot('idle');
     loadFromFirebase(true);
   } catch(e) {
-    console.warn('Firebase init failed:', e);
+    console.error('Firebase init failed:', e);
     setSyncDot('error');
+    toast('Firebase error: ' + (e.message || e.code || e));
   }
 }
 
@@ -1458,7 +1459,7 @@ function syncNow() {
   const data = JSON.parse(JSON.stringify(S));
   _db.ref('sessions/' + S.sessionId).set(data)
     .then(() => { setSyncDot('saved'); setTimeout(() => setSyncDot('idle'), 3000); })
-    .catch(e => { console.warn('Sync error:', e); setSyncDot('error'); });
+    .catch(e => { console.error('Sync error:', e); setSyncDot('error'); toast('Sync error: ' + (e.message || e.code || e)); });
 }
 
 function loadFromFirebase(silent = false) {
@@ -1483,7 +1484,7 @@ function loadFromFirebase(silent = false) {
     setSyncDot('saved');
     toast('Session loaded from cloud ☁️');
     setTimeout(() => setSyncDot('idle'), 3000);
-  }).catch(e => { console.warn('Load error:', e); setSyncDot('error'); });
+  }).catch(e => { console.error('Load error:', e); setSyncDot('error'); toast('Load error: ' + (e.message || e.code || e)); });
 }
 
 function newSession() {
