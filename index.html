@@ -1456,8 +1456,8 @@ function scheduleSync() {
 
 function syncNow() {
   if (!_db || !S.sessionId) return;
-  const data = JSON.parse(JSON.stringify(S));
-  _db.ref('sessions/' + S.sessionId).set(data)
+  // Store as a JSON string so Firebase never mangles arrays into objects
+  _db.ref('sessions/' + S.sessionId).set({ state: JSON.stringify(S) })
     .then(() => { setSyncDot('saved'); setTimeout(() => setSyncDot('idle'), 3000); })
     .catch(e => { console.error('Sync error:', e); setSyncDot('error'); toast('Sync error: ' + (e.message || e.code || e)); });
 }
@@ -1467,16 +1467,9 @@ function loadFromFirebase(silent = false) {
   setSyncDot('saving');
   _db.ref('sessions/' + S.sessionId).get().then(snap => {
     if (!snap.exists()) { setSyncDot('idle'); if (!silent) toast('No session found with that ID.'); return; }
-    const d = snap.val();
+    const raw = snap.val();
+    const d = JSON.parse(raw.state || '{}');
     Object.assign(S, d);
-    // Ensure all arrays exist after merge — Firebase omits undefined/empty keys
-    S.players = S.players || [];
-    S.foc = S.foc || {}; S.foc.groups = S.foc.groups || [];
-    S.fp  = S.fp  || {}; S.fp.teams  = S.fp.teams  || []; S.fp.pools = S.fp.pools || [];
-    S.shuffle = S.shuffle || {}; S.shuffle.players = S.shuffle.players || []; S.shuffle.rounds = S.shuffle.rounds || [];
-    S.manual  = S.manual  || {}; S.manual.players  = S.manual.players  || []; S.manual.matches  = S.manual.matches  || [];
-    S.collapsed = S.collapsed || {};
-    S.event = S.event || { name: '', date: '', scoreType: 'SIDEOUT', location: '' };
     // Re-render all UI
     if (S.event) {
       document.getElementById('eventName').value = S.event.name || '';
