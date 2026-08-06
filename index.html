@@ -638,6 +638,13 @@ function showInner(prefix, name, btn) {
   const section = document.getElementById('tab-' + prefix);
   section.querySelectorAll('.inner-tab').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
+  // Re-render play content so Firebase-loaded data always shows immediately
+  if (name === 'play') {
+    if (prefix === 'foc') renderFocMatches();
+    else if (prefix === 'fp') renderFpMatches();
+    else if (prefix === 'shuffle') renderShuffleMatches();
+    else if (prefix === 'manual') renderManualMatches();
+  }
 }
 
 // ─── EVENT ────────────────────────────────────────────────────────────────────
