@@ -174,7 +174,13 @@ pre{font-family:Menlo,Consolas,monospace;font-size:.72rem;overflow-x:auto;backgr
       <h1>DUPR Session</h1>
       <p>Moreton City Pickleball</p>
     </div>
-    <button class="back-btn" id="backBtn" onclick="showTab('home')" style="display:none">← Home</button>
+    <div style="display:flex;align-items:center;gap:12px;margin-left:auto">
+      <div id="syncInfo" style="display:none;align-items:center;gap:8px">
+        <div id="syncDot" style="width:10px;height:10px;border-radius:50%;background:#6b7280;transition:background .4s;flex-shrink:0" title="Sync status"></div>
+        <span style="font-size:.72rem;color:rgba(255,255,255,.55);font-family:monospace;white-space:nowrap">ID: <strong id="sessionIdDisplay" style="color:rgba(255,255,255,.85);letter-spacing:.08em">—</strong></span>
+      </div>
+      <button class="back-btn" id="backBtn" onclick="showTab('home')" style="display:none">← Home</button>
+    </div>
   </div>
 </header>
 
@@ -223,6 +229,11 @@ pre{font-family:Menlo,Consolas,monospace;font-size:.72rem;overflow-x:auto;backgr
       <div class="tile-name">Random Shuffle</div>
       <div class="tile-desc">Randomly assign players to courts each round — new partners every game</div>
     </div>
+    <div class="tile tile-accent" onclick="navTile('manual')">
+      <span class="tile-icon">✏️</span>
+      <div class="tile-name">Manual Entry</div>
+      <div class="tile-desc">Record individual matches by hand — pick 4 players and enter the score</div>
+    </div>
   </div>
 
   <div class="card" style="margin-top:28px">
@@ -232,6 +243,7 @@ pre{font-family:Menlo,Consolas,monospace;font-size:.72rem;overflow-x:auto;backgr
       <strong>Four on a Court:</strong> Upload CSV (<em>Player Name, DUPR ID</em>), auto-assign groups of 4, record 3 rotation matches.<br>
       <strong>Fixed Partner:</strong> Upload CSV (<em>Player 1, DUPR 1, Player 2, DUPR 2</em>), run pool round robins.<br>
       <strong>Random Shuffle:</strong> Upload CSV (<em>Player Name, DUPR ID</em>), set courts &amp; rounds, players shuffle randomly each round.<br>
+      <strong>Manual Entry:</strong> Upload CSV (<em>Player Name, DUPR ID</em>), then add each match by selecting 4 players and entering scores.<br>
       <strong>Export:</strong> Each session has its own Export CSV button in the score recording screen.
     </div>
   </div>
@@ -265,6 +277,27 @@ pre{font-family:Menlo,Consolas,monospace;font-size:.72rem;overflow-x:auto;backgr
       </div>
     </div>
     <button class="btn btn-primary" onclick="saveEvent()">✓ Save Configuration</button>
+  </div>
+  <div class="card" id="firebaseCard" style="display:none">
+    <div class="card-title">☁️ Cloud Sync</div>
+    <div class="alert alert-success" id="firebaseAlert">Your session auto-saves to Firebase. Share the Session ID to continue on another device.</div>
+    <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start">
+      <div>
+        <label style="display:block;font-size:.82rem;font-weight:700;color:var(--gray-700);margin-bottom:5px">Session ID</label>
+        <div style="display:flex;align-items:center;gap:8px">
+          <code id="sessionIdFull" style="font-size:1.4rem;letter-spacing:.2em;font-weight:900;color:var(--blue-darker);background:var(--blue-light);padding:6px 14px;border-radius:var(--radius)">——</code>
+          <button class="btn btn-secondary btn-sm" onclick="copySessionId()">📋 Copy</button>
+          <button class="btn btn-danger btn-sm" onclick="confirmNewSession()">🔄 New</button>
+        </div>
+      </div>
+      <div style="flex:1;min-width:220px">
+        <label style="display:block;font-size:.82rem;font-weight:700;color:var(--gray-700);margin-bottom:5px">Join Existing Session</label>
+        <div style="display:flex;gap:8px">
+          <input type="text" id="joinSessionInput" placeholder="Enter Session ID" style="font-family:monospace;letter-spacing:.1em;text-transform:uppercase;max-width:160px">
+          <button class="btn btn-primary btn-sm" onclick="joinSession(document.getElementById('joinSessionInput').value)">Load</button>
+        </div>
+      </div>
+    </div>
   </div>
   <div class="card">
     <div class="card-title">ℹ️ DUPR Export Format</div>
@@ -461,22 +494,124 @@ pre{font-family:Menlo,Consolas,monospace;font-size:.72rem;overflow-x:auto;backgr
   </div>
 </section>
 
+<!-- ========== MANUAL ENTRY ========== -->
+<section id="tab-manual" class="section">
+  <div class="inner-tabs">
+    <button class="inner-tab active" onclick="showInner('manual','setup',this)">1. Players</button>
+    <button class="inner-tab" onclick="showInner('manual','play',this)">2. Matches</button>
+  </div>
+
+  <div id="manual-setup" class="inner-section active">
+    <div class="card">
+      <div class="card-title">📥 Import Players</div>
+      <div class="alert alert-info">
+        CSV format: <strong>Player Name, DUPR ID</strong> — one player per row.<br>
+        Export your Google Sheet as CSV and upload it here.
+      </div>
+      <div class="form-group">
+        <label>Upload Player CSV</label>
+        <input type="file" id="manualPlayerCsv" accept=".csv" onchange="importManualCSV(event)" style="padding:8px">
+      </div>
+      <div style="text-align:center;color:var(--gray-500);margin:6px 0;font-size:.85rem">— or add manually —</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Full Name</label>
+          <input type="text" id="manualAddName" placeholder="First Last">
+        </div>
+        <div class="form-group">
+          <label>DUPR ID</label>
+          <input type="text" id="manualAddDupr" placeholder="e.g. BK5V6D">
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <button class="btn btn-primary" onclick="addManualPlayer()">+ Add Player</button>
+        <button class="btn btn-danger btn-sm" onclick="clearManualPlayers()" style="margin-left:auto">Clear All</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">👥 Player List — <span id="manualPlayerCount">0</span> players</div>
+      <div id="manualPlayerTableWrap"><div class="empty-state">No players yet.</div></div>
+    </div>
+    <div style="text-align:right">
+      <button class="btn btn-yellow" onclick="showInner('manual','play',document.querySelector('#tab-manual .inner-tab:nth-child(2)'))">Go to Matches →</button>
+    </div>
+  </div>
+
+  <div id="manual-play" class="inner-section">
+    <div class="card">
+      <div class="card-title">➕ Add Match</div>
+      <div class="alert alert-info">Select four players and enter the court number, then click <strong>Add Match</strong>. Score it in the list below.</div>
+      <div class="form-row" style="margin-bottom:10px">
+        <div class="form-group">
+          <label>Team A — Player 1</label>
+          <select id="manualA1"><option value="">Select player…</option></select>
+        </div>
+        <div class="form-group">
+          <label>Team A — Player 2</label>
+          <select id="manualA2"><option value="">Select player…</option></select>
+        </div>
+      </div>
+      <div class="form-row" style="margin-bottom:10px">
+        <div class="form-group">
+          <label>Team B — Player 1</label>
+          <select id="manualB1"><option value="">Select player…</option></select>
+        </div>
+        <div class="form-group">
+          <label>Team B — Player 2</label>
+          <select id="manualB2"><option value="">Select player…</option></select>
+        </div>
+      </div>
+      <div class="form-row" style="max-width:200px;margin-bottom:14px">
+        <div class="form-group">
+          <label>Court <span style="font-weight:400;color:var(--gray-500)">(optional)</span></label>
+          <input type="number" id="manualCourt" min="1" max="20" value="1">
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="addManualMatch()">+ Add Match</button>
+    </div>
+    <div id="manualMatchArea"><div class="empty-state">No matches added yet.</div></div>
+  </div>
+</section>
+
 </main>
 
 <script>
+// ══════════════════════════════════════════════════════════════════════════════
+// FIREBASE CLOUD SYNC — fill in your project config to enable auto-save.
+// Steps:
+//  1. Go to console.firebase.google.com → create a project
+//  2. Add a Web app → copy the firebaseConfig object below
+//  3. In Firebase console go to Realtime Database → Create database (test mode)
+//  4. Replace null below with your config object and save the file
+// ══════════════════════════════════════════════════════════════════════════════
+const FIREBASE_CONFIG = null;
+// const FIREBASE_CONFIG = {
+//   apiKey: "AIza...",
+//   authDomain: "your-project.firebaseapp.com",
+//   databaseURL: "https://your-project-default-rtdb.firebaseio.com",
+//   projectId: "your-project",
+//   storageBucket: "your-project.appspot.com",
+//   messagingSenderId: "000000000000",
+//   appId: "1:000000000000:web:abc123"
+// };
+
 // ─── STATE ────────────────────────────────────────────────────────────────────
 const S = {
+  sessionId: '',
   event: { name: 'Moreton City Pickleball DUPR Session', date: '', scoreType: 'SIDEOUT', location: '' },
   players: [],
   foc: { groups: [] },
   fp: { teams: [], pools: [], courts: 2 },
   shuffle: { players: [], rounds: [], courts: 2, roundCount: 3 },
+  manual: { players: [], matches: [] },
   locked: false,
   collapsed: {}
 };
 
 document.getElementById('eventDate').value = new Date().toISOString().slice(0,10);
 S.event.date = document.getElementById('eventDate').value;
+// Firebase is loaded via CDN scripts at bottom of body — init after they load
+window.addEventListener('load', initFirebase);
 
 // ─── TABS ─────────────────────────────────────────────────────────────────────
 function showTab(name) {
@@ -485,6 +620,7 @@ function showTab(name) {
   document.getElementById('backBtn').style.display = name === 'home' ? 'none' : 'inline-flex';
   if (name === 'foc') { renderPlayerTable(); updateFocGroupDefault(); }
   if (name === 'fp') populateFpSelects();
+  if (name === 'manual') { renderManualPlayerTable(); populateManualSelects(); }
 }
 
 function navTile(name) { showTab(name); }
@@ -506,6 +642,7 @@ function saveEvent() {
   S.event.scoreType = document.getElementById('scoreType').value;
   S.event.location  = document.getElementById('eventLocation').value.trim();
   toast('Event configuration saved!');
+  scheduleSync();
 }
 
 // ─── PLAYERS ─────────────────────────────────────────────────────────────────
@@ -528,6 +665,7 @@ function importCSV(e) {
     });
     renderPlayerTable();
     toast(`Imported ${added} player(s).`);
+    scheduleSync();
     e.target.value = '';
   };
   reader.readAsText(file);
@@ -552,21 +690,23 @@ function addPlayer() {
   document.getElementById('addName').value = '';
   document.getElementById('addDupr').value = '';
   renderPlayerTable();
+  scheduleSync();
 }
 
 function updatePlayer(id, field, value) {
   const p = S.players.find(p => p.id === id);
-  if (p) p[field] = value.trim();
+  if (p) { p[field] = value.trim(); scheduleSync(); }
 }
 
 function removePlayer(id) {
   S.players = S.players.filter(p => p.id !== id);
   renderPlayerTable();
+  scheduleSync();
 }
 
 function clearPlayers() {
   if (!confirm('Clear all players?')) return;
-  S.players = []; renderPlayerTable();
+  S.players = []; renderPlayerTable(); scheduleSync();
 }
 
 function renderPlayerTable() {
@@ -624,6 +764,7 @@ function generateFocSchedule() {
   renderFocMatches();
   showInner('foc','play', document.querySelector('#tab-foc .inner-tab:nth-child(2)'));
   toast('Schedule generated!');
+  scheduleSync();
 }
 
 function renderFocMatches() {
@@ -696,6 +837,7 @@ function importTeamCSV(e) {
     renderPlayerTable();
     populateFpSelects();
     toast(`Imported ${teams} team(s), ${players} new player(s).`);
+    scheduleSync();
     e.target.value = '';
   };
   reader.readAsText(file);
@@ -715,11 +857,13 @@ function addTeam() {
   document.getElementById('fpP1').value = '';
   document.getElementById('fpP2').value = '';
   renderTeamList();
+  scheduleSync();
 }
 
 function removeTeam(id) {
   S.fp.teams = S.fp.teams.filter(t => t.id !== id);
   renderTeamList();
+  scheduleSync();
 }
 
 function renderTeamList() {
@@ -757,6 +901,7 @@ function generateFpSchedule() {
   renderFpMatches();
   showInner('fp', 'play', document.querySelector('#tab-fp .inner-tab:nth-child(3)'));
   toast('Schedule generated!');
+  scheduleSync();
 }
 
 function roundRobin(teams, courts, courtOffset) {
@@ -824,7 +969,7 @@ function matchCard(match, type, groupIdx, matchIdx) {
   return `
     <div class="match-card ${done?'completed':''} ${locked?'locked':''}" id="mc-${type}-${groupIdx}-${matchIdx}">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-        <span class="badge ${done?'badge-green':'badge-gray'}">${done?'✓ Complete':'Round '+match.round}</span>
+        <span class="badge ${done?'badge-green':'badge-gray'}">${done?'✓ Complete':type==='manual'?`Match ${match.matchNum}`:'Round '+match.round}</span>
         <span class="court-tag">Court ${match.court}</span>
       </div>
       <div class="match-teams">
@@ -869,6 +1014,7 @@ function matchCard(match, type, groupIdx, matchIdx) {
 function getMatch(type, gi, mi) {
   if (type==='foc') return S.foc.groups[gi].matches[mi];
   if (type==='fp')  return S.fp.pools[gi].matches[mi];
+  if (type==='manual') return S.manual.matches[mi];
   return S.shuffle.rounds[gi].matches[mi];
 }
 
@@ -877,6 +1023,7 @@ function setScore(type, gi, mi, gameIdx, team, val) {
   if (!m.scores[gameIdx]) m.scores[gameIdx] = {};
   const v = parseInt(val);
   m.scores[gameIdx][team] = isNaN(v) ? undefined : v;
+  scheduleSync();
 }
 
 function toggleDone(type, gi, mi) {
@@ -888,7 +1035,9 @@ function toggleDone(type, gi, mi) {
   } else { m.completed = false; }
   if (type==='foc') renderFocMatches();
   else if (type==='fp') renderFpMatches();
+  else if (type==='manual') renderManualMatches();
   else renderShuffleMatches();
+  scheduleSync();
 }
 
 // ─── EXPORT ───────────────────────────────────────────────────────────────────
@@ -908,6 +1057,7 @@ function buildRows(type) {
   if (type==='foc'||type==='all') S.foc.groups.forEach(g=>g.matches.filter(m=>m.completed).forEach(m=>row(m.teamA,m.teamB,m.scores)));
   if (type==='fp'||type==='all') S.fp.pools.forEach(pool=>pool.matches.filter(m=>m.completed).forEach(m=>row(m.teamA,m.teamB,m.scores)));
   if (type==='shuffle'||type==='all') S.shuffle.rounds.forEach(r=>r.matches.filter(m=>m.completed).forEach(m=>row(m.teamA,m.teamB,m.scores)));
+  if (type==='manual'||type==='all') S.manual.matches.filter(m=>m.completed).forEach(m=>row(m.teamA,m.teamB,m.scores));
   return rows;
 }
 
@@ -956,24 +1106,28 @@ function sessionBar(type) {
 function finishSession() {
   if (!confirm('Finish session? Score editing will be locked. You can unlock it again if needed.')) return;
   S.locked = true;
-  renderFocMatches(); renderFpMatches(); renderShuffleMatches();
+  renderFocMatches(); renderFpMatches(); renderShuffleMatches(); renderManualMatches();
   toast('Session finished — scores locked.');
+  syncNow();
 }
 
 function unlockSession() {
   S.locked = false;
-  renderFocMatches(); renderFpMatches(); renderShuffleMatches();
+  renderFocMatches(); renderFpMatches(); renderShuffleMatches(); renderManualMatches();
   toast('Session unlocked.');
+  scheduleSync();
 }
 
 function clearSession() {
   if (!confirm('Clear all session data? This will remove all players, groups, teams, matches and scores.')) return;
   S.players = []; S.foc.groups = []; S.fp.teams = []; S.fp.pools = [];
   S.shuffle.players = []; S.shuffle.rounds = [];
+  S.manual.players = []; S.manual.matches = [];
   S.locked = false; S.collapsed = {};
-  renderFocMatches(); renderFpMatches(); renderShuffleMatches();
-  renderPlayerTable(); renderTeamList(); renderShufflePlayerTable();
+  renderFocMatches(); renderFpMatches(); renderShuffleMatches(); renderManualMatches();
+  renderPlayerTable(); renderTeamList(); renderShufflePlayerTable(); renderManualPlayerTable();
   toast('Session cleared.');
+  scheduleSync();
 }
 
 function fillDummyScores(type) {
@@ -983,8 +1137,10 @@ function fillDummyScores(type) {
   if (type === 'foc') S.foc.groups.forEach(g => fill(g.matches));
   if (type === 'fp')  S.fp.pools.forEach(p => fill(p.matches));
   if (type === 'shuffle') S.shuffle.rounds.forEach(r => fill(r.matches));
+  if (type === 'manual') fill(S.manual.matches);
   if (type === 'foc') renderFocMatches();
   else if (type === 'fp') renderFpMatches();
+  else if (type === 'manual') renderManualMatches();
   else renderShuffleMatches();
   toast('Dummy scores filled — ready to test export.');
 }
@@ -1008,6 +1164,7 @@ function importShuffleCSV(e) {
     });
     renderShufflePlayerTable();
     toast(`Imported ${added} player(s).`);
+    scheduleSync();
     e.target.value = '';
   };
   reader.readAsText(file);
@@ -1022,21 +1179,23 @@ function addShufflePlayer() {
   document.getElementById('shuffleAddName').value = '';
   document.getElementById('shuffleAddDupr').value = '';
   renderShufflePlayerTable();
+  scheduleSync();
 }
 
 function updateShufflePlayer(id, field, value) {
   const p = S.shuffle.players.find(p => p.id === id);
-  if (p) p[field] = value.trim();
+  if (p) { p[field] = value.trim(); scheduleSync(); }
 }
 
 function removeShufflePlayer(id) {
   S.shuffle.players = S.shuffle.players.filter(p => p.id !== id);
   renderShufflePlayerTable();
+  scheduleSync();
 }
 
 function clearShufflePlayers() {
   if (!confirm('Clear all shuffle players?')) return;
-  S.shuffle.players = []; renderShufflePlayerTable();
+  S.shuffle.players = []; renderShufflePlayerTable(); scheduleSync();
 }
 
 function renderShufflePlayerTable() {
@@ -1091,6 +1250,7 @@ function generateShuffle() {
   renderShuffleMatches();
   showInner('shuffle', 'play', document.querySelector('#tab-shuffle .inner-tab:nth-child(2)'));
   toast('Random schedule generated!');
+  scheduleSync();
 }
 
 function renderShuffleMatches() {
@@ -1113,6 +1273,244 @@ function renderShuffleMatches() {
   }).join('') + sessionBar('shuffle');
 }
 
+// ─── MANUAL ENTRY ─────────────────────────────────────────────────────────────
+function importManualCSV(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const lines = ev.target.result.split(/\r?\n/).filter(l => l.trim());
+    let added = 0;
+    lines.forEach((line, i) => {
+      const cols = parseLine(line);
+      const raw0 = (cols[0]||'').trim().replace(/^["']|["']$/g,'');
+      if (i === 0 && /name|player/i.test(raw0)) return;
+      const name = raw0;
+      const duprId = (cols[1]||'').trim().replace(/^["']|["']$/g,'');
+      if (name && duprId && !S.manual.players.find(p => p.duprId === duprId)) {
+        S.manual.players.push({ id: uid(), name, duprId }); added++;
+      }
+    });
+    renderManualPlayerTable();
+    populateManualSelects();
+    toast(`Imported ${added} player(s).`);
+    scheduleSync();
+    e.target.value = '';
+  };
+  reader.readAsText(file);
+}
+
+function addManualPlayer() {
+  const name = document.getElementById('manualAddName').value.trim();
+  const duprId = document.getElementById('manualAddDupr').value.trim();
+  if (!name || !duprId) { toast('Enter both name and DUPR ID.'); return; }
+  if (S.manual.players.find(p => p.duprId === duprId)) { toast('DUPR ID already exists.'); return; }
+  S.manual.players.push({ id: uid(), name, duprId });
+  document.getElementById('manualAddName').value = '';
+  document.getElementById('manualAddDupr').value = '';
+  renderManualPlayerTable();
+  populateManualSelects();
+  scheduleSync();
+}
+
+function updateManualPlayer(id, field, value) {
+  const p = S.manual.players.find(p => p.id === id);
+  if (p) { p[field] = value.trim(); scheduleSync(); }
+}
+
+function removeManualPlayer(id) {
+  S.manual.players = S.manual.players.filter(p => p.id !== id);
+  renderManualPlayerTable();
+  populateManualSelects();
+  scheduleSync();
+}
+
+function clearManualPlayers() {
+  if (!confirm('Clear all players?')) return;
+  S.manual.players = [];
+  renderManualPlayerTable();
+  populateManualSelects();
+  scheduleSync();
+}
+
+function renderManualPlayerTable() {
+  const count = S.manual.players.length;
+  document.getElementById('manualPlayerCount').textContent = count;
+  const w = document.getElementById('manualPlayerTableWrap');
+  if (!count) { w.innerHTML = '<div class="empty-state">No players yet.</div>'; return; }
+  w.innerHTML = `<table>
+    <thead><tr><th>#</th><th>Name</th><th>DUPR ID</th><th></th></tr></thead>
+    <tbody>${S.manual.players.map((p,i) => `
+      <tr>
+        <td style="text-align:center;color:var(--gray-500)">${i+1}</td>
+        <td><input class="inline-edit" style="font-weight:700" value="${esc(p.name)}" onchange="updateManualPlayer(${p.id},'name',this.value)"></td>
+        <td><input class="inline-edit" style="font-family:monospace;font-size:.85rem" value="${esc(p.duprId)}" onchange="updateManualPlayer(${p.id},'duprId',this.value)"></td>
+        <td><button class="btn btn-danger btn-sm" onclick="removeManualPlayer(${p.id})">✕</button></td>
+      </tr>`).join('')}
+    </tbody></table>`;
+}
+
+function populateManualSelects() {
+  const opts = '<option value="">Select player…</option>' +
+    S.manual.players.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
+  ['manualA1','manualA2','manualB1','manualB2'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = opts;
+  });
+}
+
+function addManualMatch() {
+  const ids = ['manualA1','manualA2','manualB1','manualB2'].map(id => document.getElementById(id).value);
+  if (ids.some(v => !v)) { toast('Select all four players.'); return; }
+  if (new Set(ids).size < 4) { toast('Each player can only appear once per match.'); return; }
+  const find = id => S.manual.players.find(p => p.id == id);
+  const courtVal = parseInt(document.getElementById('manualCourt').value) || 1;
+  const matchNum = S.manual.matches.length + 1;
+  S.manual.matches.push({
+    id: uid(), matchNum,
+    teamA: [find(ids[0]), find(ids[1])],
+    teamB: [find(ids[2]), find(ids[3])],
+    round: matchNum, court: courtVal,
+    scores: [], completed: false
+  });
+  ['manualA1','manualA2','manualB1','manualB2'].forEach(id => { document.getElementById(id).value = ''; });
+  renderManualMatches();
+  toast('Match added.');
+  scheduleSync();
+}
+
+function removeManualMatch(id) {
+  S.manual.matches = S.manual.matches.filter(m => m.id !== id);
+  S.manual.matches.forEach((m, i) => { m.matchNum = i + 1; m.round = i + 1; });
+  renderManualMatches();
+  scheduleSync();
+}
+
+function renderManualMatches() {
+  const area = document.getElementById('manualMatchArea');
+  if (!area) return;
+  if (!S.manual.matches.length) {
+    area.innerHTML = '<div class="empty-state">No matches added yet. Use the form above to add a match.</div>' + sessionBar('manual');
+    return;
+  }
+  area.innerHTML = S.manual.matches.map((m, mi) => `
+    <div style="margin-bottom:4px">
+      ${matchCard(m, 'manual', 0, mi)}
+      ${!S.locked ? `<div style="text-align:right;margin-top:-4px;margin-bottom:10px">
+        <button class="btn btn-danger btn-sm" onclick="removeManualMatch(${m.id})">✕ Remove Match</button>
+      </div>` : ''}
+    </div>`).join('') + sessionBar('manual');
+}
+
+// ─── FIREBASE SYNC ────────────────────────────────────────────────────────────
+let _db = null, _syncTimer = null;
+
+function initFirebase() {
+  if (!FIREBASE_CONFIG) return;
+  try {
+    firebase.initializeApp(FIREBASE_CONFIG);
+    _db = firebase.database();
+    document.getElementById('syncInfo').style.display = 'flex';
+    document.getElementById('firebaseCard').style.display = 'block';
+    setSyncDot('idle');
+    const savedId = localStorage.getItem('duprSessionId');
+    if (savedId) {
+      S.sessionId = savedId;
+      updateSessionIdDisplay();
+      loadFromFirebase();
+    } else {
+      newSession();
+    }
+  } catch(e) {
+    console.warn('Firebase init failed:', e);
+    setSyncDot('error');
+  }
+}
+
+function setSyncDot(status) {
+  const dot = document.getElementById('syncDot');
+  if (!dot) return;
+  const colors = { idle:'#6b7280', saving:'#f59e0b', saved:'#22c55e', error:'#ef4444' };
+  const labels = { idle:'Synced', saving:'Saving…', saved:'Saved to cloud', error:'Sync error — check console' };
+  dot.style.background = colors[status] || '#6b7280';
+  dot.title = labels[status] || status;
+}
+
+function scheduleSync() {
+  if (!_db) return;
+  setSyncDot('saving');
+  clearTimeout(_syncTimer);
+  _syncTimer = setTimeout(syncNow, 1500);
+}
+
+function syncNow() {
+  if (!_db || !S.sessionId) return;
+  const data = JSON.parse(JSON.stringify(S));
+  _db.ref('sessions/' + S.sessionId).set(data)
+    .then(() => { setSyncDot('saved'); setTimeout(() => setSyncDot('idle'), 3000); })
+    .catch(e => { console.warn('Sync error:', e); setSyncDot('error'); });
+}
+
+function loadFromFirebase() {
+  if (!_db || !S.sessionId) return;
+  setSyncDot('saving');
+  _db.ref('sessions/' + S.sessionId).get().then(snap => {
+    if (!snap.exists()) { setSyncDot('idle'); toast('No session found with that ID.'); return; }
+    const d = snap.val();
+    // Restore state fields
+    Object.assign(S, d);
+    // Re-render all UI
+    if (S.event) {
+      document.getElementById('eventName').value = S.event.name || '';
+      document.getElementById('eventDate').value = S.event.date || '';
+      document.getElementById('scoreType').value = S.event.scoreType || 'SIDEOUT';
+      document.getElementById('eventLocation').value = S.event.location || '';
+    }
+    renderPlayerTable(); renderTeamList(); renderShufflePlayerTable(); renderManualPlayerTable();
+    populateFpSelects(); populateManualSelects();
+    renderFocMatches(); renderFpMatches(); renderShuffleMatches(); renderManualMatches();
+    updateSessionIdDisplay();
+    setSyncDot('saved');
+    toast('Session loaded from cloud ☁️');
+    setTimeout(() => setSyncDot('idle'), 3000);
+  }).catch(e => { console.warn('Load error:', e); setSyncDot('error'); });
+}
+
+function newSession() {
+  S.sessionId = Math.random().toString(36).slice(2, 8).toUpperCase();
+  localStorage.setItem('duprSessionId', S.sessionId);
+  updateSessionIdDisplay();
+  scheduleSync();
+}
+
+function confirmNewSession() {
+  if (!confirm('Start a new cloud session? This will create a fresh session ID. Your current data stays in the old session.')) return;
+  newSession();
+}
+
+function joinSession(id) {
+  id = (id || '').toUpperCase().trim();
+  if (!id) { toast('Enter a Session ID first.'); return; }
+  S.sessionId = id;
+  localStorage.setItem('duprSessionId', id);
+  document.getElementById('joinSessionInput').value = '';
+  loadFromFirebase();
+}
+
+function copySessionId() {
+  if (!S.sessionId) return;
+  navigator.clipboard.writeText(S.sessionId).then(() => toast('Session ID copied!')).catch(() => {
+    prompt('Copy this Session ID:', S.sessionId);
+  });
+}
+
+function updateSessionIdDisplay() {
+  const id = S.sessionId || '—';
+  const el1 = document.getElementById('sessionIdDisplay');
+  const el2 = document.getElementById('sessionIdFull');
+  if (el1) el1.textContent = id;
+  if (el2) el2.textContent = id;
+}
+
 // ─── UTILS ────────────────────────────────────────────────────────────────────
 let _uid=Date.now();
 function uid(){return ++_uid;}
@@ -1125,5 +1523,8 @@ function toast(msg){
   setTimeout(()=>el.remove(),2900);
 }
 </script>
+<!-- Firebase SDKs — loaded last so they don't block rendering -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 </body>
 </html>
