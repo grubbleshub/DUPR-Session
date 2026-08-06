@@ -1468,8 +1468,15 @@ function loadFromFirebase(silent = false) {
   _db.ref('sessions/' + S.sessionId).get().then(snap => {
     if (!snap.exists()) { setSyncDot('idle'); if (!silent) toast('No session found with that ID.'); return; }
     const d = snap.val();
-    // Restore state fields
     Object.assign(S, d);
+    // Ensure all arrays exist after merge — Firebase omits undefined/empty keys
+    S.players = S.players || [];
+    S.foc = S.foc || {}; S.foc.groups = S.foc.groups || [];
+    S.fp  = S.fp  || {}; S.fp.teams  = S.fp.teams  || []; S.fp.pools = S.fp.pools || [];
+    S.shuffle = S.shuffle || {}; S.shuffle.players = S.shuffle.players || []; S.shuffle.rounds = S.shuffle.rounds || [];
+    S.manual  = S.manual  || {}; S.manual.players  = S.manual.players  || []; S.manual.matches  = S.manual.matches  || [];
+    S.collapsed = S.collapsed || {};
+    S.event = S.event || { name: '', date: '', scoreType: 'SIDEOUT', location: '' };
     // Re-render all UI
     if (S.event) {
       document.getElementById('eventName').value = S.event.name || '';
