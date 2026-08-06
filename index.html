@@ -175,8 +175,8 @@ pre{font-family:Menlo,Consolas,monospace;font-size:.72rem;overflow-x:auto;backgr
       <p>Moreton City Pickleball</p>
     </div>
     <div style="display:flex;align-items:center;gap:12px;margin-left:auto">
-      <div id="syncInfo" style="display:none;align-items:center;gap:8px">
-        <div id="syncDot" style="width:10px;height:10px;border-radius:50%;background:#6b7280;transition:background .4s;flex-shrink:0" title="Sync status"></div>
+      <div id="syncInfo" style="display:flex;align-items:center;gap:8px">
+        <div id="syncDot" style="width:10px;height:10px;border-radius:50%;background:#6b7280;transition:background .4s;flex-shrink:0" title="Firebase not configured"></div>
         <span style="font-size:.72rem;color:rgba(255,255,255,.55);font-family:monospace;white-space:nowrap">ID: <strong id="sessionIdDisplay" style="color:rgba(255,255,255,.85);letter-spacing:.08em">—</strong></span>
       </div>
       <button class="back-btn" id="backBtn" onclick="showTab('home')" style="display:none">← Home</button>
@@ -610,7 +610,11 @@ const S = {
 
 document.getElementById('eventDate').value = new Date().toISOString().slice(0,10);
 S.event.date = document.getElementById('eventDate').value;
-// Firebase is loaded via CDN scripts at bottom of body — init after they load
+// Generate or restore session ID immediately (visible even without Firebase)
+S.sessionId = localStorage.getItem('duprSessionId') || Math.random().toString(36).slice(2,8).toUpperCase();
+localStorage.setItem('duprSessionId', S.sessionId);
+updateSessionIdDisplay();
+// Firebase CDN scripts load at bottom of body — init after they're ready
 window.addEventListener('load', initFirebase);
 
 // ─── TABS ─────────────────────────────────────────────────────────────────────
@@ -1405,21 +1409,20 @@ function renderManualMatches() {
 let _db = null, _syncTimer = null;
 
 function initFirebase() {
-  if (!FIREBASE_CONFIG) return;
+  document.getElementById('firebaseCard').style.display = 'block';
+  if (!FIREBASE_CONFIG) {
+    document.getElementById('firebaseAlert').innerHTML =
+      '⚠️ <strong>Firebase not configured.</strong> Fill in <code>FIREBASE_CONFIG</code> at the top of the script to enable cloud sync. ' +
+      '<a href="https://console.firebase.google.com" target="_blank" style="color:var(--blue)">Open Firebase Console →</a>';
+    document.getElementById('firebaseAlert').className = 'alert alert-warning';
+    setSyncDot('idle');
+    return;
+  }
   try {
     firebase.initializeApp(FIREBASE_CONFIG);
     _db = firebase.database();
-    document.getElementById('syncInfo').style.display = 'flex';
-    document.getElementById('firebaseCard').style.display = 'block';
     setSyncDot('idle');
-    const savedId = localStorage.getItem('duprSessionId');
-    if (savedId) {
-      S.sessionId = savedId;
-      updateSessionIdDisplay();
-      loadFromFirebase();
-    } else {
-      newSession();
-    }
+    loadFromFirebase();
   } catch(e) {
     console.warn('Firebase init failed:', e);
     setSyncDot('error');
