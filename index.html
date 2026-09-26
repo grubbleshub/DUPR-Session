@@ -617,7 +617,7 @@ const S = {
   sessionId: '',
   event: { name: 'Moreton City Pickleball DUPR Session', date: '', scoreType: 'SIDEOUT', location: '' },
   players: [],
-  foc: { groups: [] },
+  foc: { groups: [], adhoc: [] },
   fp: { teams: [], pools: [], courts: 2 },
   shuffle: { players: [], rounds: [], courts: 2, roundCount: 3 },
   manual: { players: [], matches: [] },
@@ -951,7 +951,58 @@ function renderFocMatches() {
           }).join('')}
         </div>
       </div>`;
-  }).join('') + sessionBar('foc');
+  }).join('') + focAdhocSection() + sessionBar('foc');
+}
+
+function focAdhocSection() {
+  const opts = '<option value="">— select —</option>' +
+    S.players.map((p,i) => `<option value="${i}">${esc(p.name)}</option>`).join('');
+  const list = (S.foc.adhoc||[]).length
+    ? (S.foc.adhoc||[]).map((m,mi) => matchCard(m,'focadhoc',0,mi)).join('')
+    : '<div class="empty-state" style="margin:0;padding:12px">No ad hoc games yet.</div>';
+  return `
+    <div style="margin-top:20px">
+      <div class="pool-header" style="border-radius:var(--radius) var(--radius) 0 0;cursor:default">
+        <span>⚡ Ad Hoc Games</span>
+        <span>${(S.foc.adhoc||[]).filter(m=>m.completed).length}/${(S.foc.adhoc||[]).length} complete</span>
+      </div>
+      <div class="pool-body" style="border-radius:0 0 var(--radius) var(--radius);padding:14px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+          <div>
+            <div style="font-size:.75rem;font-weight:700;color:var(--gray-700);margin-bottom:6px">TEAM A</div>
+            <select id="adhocA0" style="width:100%;margin-bottom:6px;padding:7px 10px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:.88rem">${opts}</select>
+            <select id="adhocA1" style="width:100%;padding:7px 10px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:.88rem">${opts}</select>
+          </div>
+          <div>
+            <div style="font-size:.75rem;font-weight:700;color:var(--gray-700);margin-bottom:6px">TEAM B</div>
+            <select id="adhocB0" style="width:100%;margin-bottom:6px;padding:7px 10px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:.88rem">${opts}</select>
+            <select id="adhocB1" style="width:100%;padding:7px 10px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:.88rem">${opts}</select>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+          <label style="font-size:.82rem;font-weight:700;color:var(--gray-700);margin:0">Court:</label>
+          <input type="number" id="adhocCourt" min="1" max="20" value="1" style="width:70px;padding:7px 10px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:.88rem">
+          <button class="btn btn-primary" onclick="addFocAdhocMatch()">+ Add Game</button>
+        </div>
+        ${list}
+      </div>
+    </div>`;
+}
+
+function addFocAdhocMatch() {
+  const getP = idx => S.players[parseInt(idx)];
+  const a0 = getP(document.getElementById('adhocA0').value);
+  const a1 = getP(document.getElementById('adhocA1').value);
+  const b0 = getP(document.getElementById('adhocB0').value);
+  const b1 = getP(document.getElementById('adhocB1').value);
+  if (!a0||!a1||!b0||!b1) { toast('Select a player for every slot.'); return; }
+  if (new Set([a0.id,a1.id,b0.id,b1.id]).size < 4) { toast('Each player must be different.'); return; }
+  const court = Math.max(1, parseInt(document.getElementById('adhocCourt').value)||1);
+  if (!S.foc.adhoc) S.foc.adhoc = [];
+  S.foc.adhoc.push({ teamA:[a0,a1], teamB:[b0,b1], court, scores:[], completed:false });
+  renderFocMatches();
+  scheduleSync();
+  toast('Ad hoc game added.');
 }
 
 // ─── FIXED PARTNER ────────────────────────────────────────────────────────────
@@ -1162,7 +1213,7 @@ function matchCard(match, type, groupIdx, matchIdx) {
   return `
     <div class="match-card ${done?'completed':''} ${locked?'locked':''}" id="mc-${type}-${groupIdx}-${matchIdx}">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-        <span class="badge ${done?'badge-green':'badge-gray'}">${done?'✓ Complete':type==='manual'?`Match ${match.matchNum}`:'Round '+match.round}</span>
+        <span class="badge ${done?'badge-green':'badge-gray'}">${done?'✓ Complete':type==='manual'?`Match ${match.matchNum}`:type==='focadhoc'?'Ad Hoc':'Round '+match.round}</span>
         <div style="display:flex;align-items:center;gap:8px">
           ${type==='shuffle'&&!locked&&!done ? `<button class="btn btn-secondary btn-sm" onclick="toggleEditPlayers(${groupIdx},${matchIdx})" style="padding:3px 9px;font-size:.75rem">${isEditing?'✕':'✎'} Players</button>` : ''}
           <span class="court-tag">Court ${match.court}</span>
@@ -1199,6 +1250,7 @@ function matchCard(match, type, groupIdx, matchIdx) {
 
 function getMatch(type, gi, mi) {
   if (type==='foc') return S.foc.groups[gi].matches[mi];
+  if (type==='focadhoc') return S.foc.adhoc[mi];
   if (type==='fp')  return S.fp.pools[gi].matches[mi];
   if (type==='manual') return S.manual.matches[mi];
   return S.shuffle.rounds[gi].matches[mi];
@@ -1219,7 +1271,7 @@ function toggleDone(type, gi, mi) {
     if (!s0||s0.a===undefined||s0.b===undefined) { toast('Enter at least Game 1 scores first.'); return; }
     m.completed = true;
   } else { m.completed = false; }
-  if (type==='foc') renderFocMatches();
+  if (type==='foc'||type==='focadhoc') renderFocMatches();
   else if (type==='fp') renderFpMatches();
   else if (type==='manual') renderManualMatches();
   else renderShuffleMatches();
@@ -1269,7 +1321,10 @@ function buildRows(type) {
     for(let i=0;i<5;i++){const g=games[i];sc.push(g?g.a:'',g?g.b:'');}
     rows.push(['D',evt,dt,a1.name,a1.duprId,'',a2.name,a2.duprId,'',b1.name,b1.duprId,'',b2.name,b2.duprId,'',...sc,S.event.location||'',S.event.scoreType||'SIDEOUT']);
   }
-  if (type==='foc'||type==='all') S.foc.groups.forEach(g=>g.matches.filter(m=>m.completed).forEach(m=>row(m.teamA,m.teamB,m.scores)));
+  if (type==='foc'||type==='all') {
+    S.foc.groups.forEach(g=>g.matches.filter(m=>m.completed).forEach(m=>row(m.teamA,m.teamB,m.scores)));
+    (S.foc.adhoc||[]).filter(m=>m.completed).forEach(m=>row(m.teamA,m.teamB,m.scores));
+  }
   if (type==='fp'||type==='all') S.fp.pools.forEach(pool=>pool.matches.filter(m=>m.completed).forEach(m=>row(m.teamA,m.teamB,m.scores)));
   if (type==='shuffle'||type==='all') S.shuffle.rounds.forEach(r=>r.matches.filter(m=>m.completed).forEach(m=>row(m.teamA,m.teamB,m.scores)));
   if (type==='manual'||type==='all') S.manual.matches.filter(m=>m.completed).forEach(m=>row(m.teamA,m.teamB,m.scores));
@@ -1753,6 +1808,7 @@ function loadFromFirebase(silent = false) {
     const raw = snap.val();
     const d = JSON.parse(raw.state || '{}');
     Object.assign(S, d);
+    if (S.foc && !S.foc.adhoc) S.foc.adhoc = [];
     // Re-render all UI
     if (S.event) {
       document.getElementById('eventName').value = S.event.name || '';
