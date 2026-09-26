@@ -987,23 +987,57 @@ function renderFpMatches() {
 function matchCard(match, type, groupIdx, matchIdx) {
   const done = match.completed;
   const locked = S.locked;
+  const isEditing = type === 'shuffle' && _editingMatch === `shuffle-${groupIdx}-${matchIdx}`;
+  const playerOpts = type === 'shuffle'
+    ? S.shuffle.players.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('')
+    : '';
+  const selVal = (slot) => {
+    const cur = slot === 'a0' ? match.teamA[0] : slot === 'a1' ? match.teamA[1] : slot === 'b0' ? match.teamB[0] : match.teamB[1];
+    return cur ? cur.id : '';
+  };
+  const makeSelect = (slot) => `
+    <select id="ep-${slot}-${groupIdx}-${matchIdx}" style="font-size:.82rem;padding:5px 8px;border-radius:6px;border:1.5px solid var(--blue);background:#fff;width:100%;margin-bottom:4px">
+      ${S.shuffle.players.map(p => `<option value="${p.id}"${p.id===selVal(slot)?' selected':''}>${esc(p.name)}</option>`).join('')}
+    </select>`;
+  const teamsHtml = isEditing ? `
+    <div style="background:var(--blue-light);border-radius:var(--radius);padding:12px;margin-bottom:10px">
+      <div style="font-size:.78rem;font-weight:700;color:var(--blue-darker);margin-bottom:8px">Edit Players — Court ${match.court}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div>
+          <div style="font-size:.75rem;font-weight:700;color:var(--gray-700);margin-bottom:4px">TEAM A</div>
+          ${makeSelect('a0')}${makeSelect('a1')}
+        </div>
+        <div>
+          <div style="font-size:.75rem;font-weight:700;color:var(--gray-700);margin-bottom:4px">TEAM B</div>
+          ${makeSelect('b0')}${makeSelect('b1')}
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button class="btn btn-primary btn-sm" onclick="saveMatchPlayers(${groupIdx},${matchIdx})">✓ Save</button>
+        <button class="btn btn-secondary btn-sm" onclick="cancelEditPlayers()">✕ Cancel</button>
+      </div>
+    </div>` : `
+    <div class="match-teams">
+      <div class="team-box">
+        <div class="team-label">Team A</div>
+        <div class="team-players">${match.teamA.map(p=>esc(p.name)).join('<br>')}</div>
+      </div>
+      <div class="vs-badge">VS</div>
+      <div class="team-box">
+        <div class="team-label">Team B</div>
+        <div class="team-players">${match.teamB.map(p=>esc(p.name)).join('<br>')}</div>
+      </div>
+    </div>`;
   return `
     <div class="match-card ${done?'completed':''} ${locked?'locked':''}" id="mc-${type}-${groupIdx}-${matchIdx}">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
         <span class="badge ${done?'badge-green':'badge-gray'}">${done?'✓ Complete':type==='manual'?`Match ${match.matchNum}`:'Round '+match.round}</span>
-        <span class="court-tag">Court ${match.court}</span>
-      </div>
-      <div class="match-teams">
-        <div class="team-box">
-          <div class="team-label">Team A</div>
-          <div class="team-players">${match.teamA.map(p=>esc(p.name)).join('<br>')}</div>
-        </div>
-        <div class="vs-badge">VS</div>
-        <div class="team-box">
-          <div class="team-label">Team B</div>
-          <div class="team-players">${match.teamB.map(p=>esc(p.name)).join('<br>')}</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          ${type==='shuffle'&&!locked&&!done ? `<button class="btn btn-secondary btn-sm" onclick="toggleEditPlayers(${groupIdx},${matchIdx})" style="padding:3px 9px;font-size:.75rem">${isEditing?'✕':'✎'} Players</button>` : ''}
+          <span class="court-tag">Court ${match.court}</span>
         </div>
       </div>
+      ${teamsHtml}
       <div class="score-row">
         ${[0].map(gi => {
           const s = match.scores[gi]||{};
@@ -1059,6 +1093,35 @@ function toggleDone(type, gi, mi) {
   else if (type==='manual') renderManualMatches();
   else renderShuffleMatches();
   scheduleSync();
+}
+
+function toggleEditPlayers(gi, mi) {
+  const key = `shuffle-${gi}-${mi}`;
+  _editingMatch = _editingMatch === key ? null : key;
+  renderShuffleMatches();
+}
+
+function cancelEditPlayers() {
+  _editingMatch = null;
+  renderShuffleMatches();
+}
+
+function saveMatchPlayers(gi, mi) {
+  const m = S.shuffle.rounds[gi].matches[mi];
+  const players = S.shuffle.players;
+  const getP = id => players.find(p => p.id === id);
+  const a0 = getP(document.getElementById(`ep-a0-${gi}-${mi}`).value);
+  const a1 = getP(document.getElementById(`ep-a1-${gi}-${mi}`).value);
+  const b0 = getP(document.getElementById(`ep-b0-${gi}-${mi}`).value);
+  const b1 = getP(document.getElementById(`ep-b1-${gi}-${mi}`).value);
+  if (!a0||!a1||!b0||!b1) { toast('Select a player for every slot.'); return; }
+  if (new Set([a0.id,a1.id,b0.id,b1.id]).size < 4) { toast('Each slot must be a different player.'); return; }
+  m.teamA = [a0, a1];
+  m.teamB = [b0, b1];
+  _editingMatch = null;
+  renderShuffleMatches();
+  scheduleSync();
+  toast('Players updated.');
 }
 
 // ─── EXPORT ───────────────────────────────────────────────────────────────────
@@ -1501,7 +1564,7 @@ function renderManualMatches() {
 }
 
 // ─── FIREBASE SYNC ────────────────────────────────────────────────────────────
-let _db = null, _syncTimer = null;
+let _db = null, _syncTimer = null, _editingMatch = null;
 
 function initFirebase() {
   document.getElementById('firebaseCard').style.display = 'block';
