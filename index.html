@@ -362,6 +362,14 @@ pre{font-family:Menlo,Consolas,monospace;font-size:.72rem;overflow-x:auto;backgr
         </div>
       </div>
       <button class="btn btn-yellow" style="font-size:1rem;padding:14px 28px" onclick="generateFocSchedule()">Generate Schedule →</button>
+      <div id="focRoundStatus" style="display:none;margin-top:14px;padding:12px 14px;background:var(--blue-light);border-radius:var(--radius);border:1.5px solid var(--blue)">
+        <div style="font-size:.85rem;font-weight:700;color:var(--blue-darker);margin-bottom:10px" id="focRoundStatusText"></div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <label style="margin:0;font-size:.82rem;font-weight:700;color:var(--gray-700);white-space:nowrap">Add more rounds:</label>
+          <input type="number" id="focAddRoundCountSetup" min="1" max="20" value="1" style="width:70px">
+          <button class="btn btn-primary btn-sm" onclick="addFocRoundsFromSetup()">+ Add Rounds</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -654,6 +662,7 @@ function showInner(prefix, name, btn) {
     else if (prefix === 'manual') renderManualMatches();
   }
   if (prefix === 'shuffle' && name === 'setup') updateShuffleRoundStatus();
+  if (prefix === 'foc' && name === 'setup') updateFocRoundStatus();
 }
 
 // ─── EVENT ────────────────────────────────────────────────────────────────────
@@ -756,6 +765,8 @@ function generateFocSchedule() {
   const courts = Math.max(1, parseInt(document.getElementById('focCourts').value)||1);
   const rounds  = Math.max(1, parseInt(document.getElementById('focRounds').value)||1);
   if (S.players.length < 4) { toast('Need at least 4 players.'); return; }
+  const hasCompleted = S.foc.groups.some(g => g.matches.some(m => m.completed));
+  if (hasCompleted && !confirm('This will replace all existing rounds including completed scores. Continue?\n\nTip: use "Add Rounds" below to add rounds without losing existing data.')) return;
   S.foc.groups = [];
   for (let r = 0; r < rounds; r++) {
     const shuffled = shuffleArray(S.players);
@@ -782,17 +793,113 @@ function generateFocSchedule() {
       S.collapsed[`foc-r${r}-c${g.court}`] = true;
     });
   });
+  updateFocRoundStatus();
   renderFocMatches();
   showInner('foc','play', document.querySelector('#tab-foc .inner-tab:nth-child(2)'));
   toast('Schedule generated!');
   scheduleSync();
 }
 
+function addFocRound(extra) {
+  if (S.players.length < 4) { toast('Need at least 4 players.'); return; }
+  const courts = S.foc.groups.length
+    ? Math.max(...S.foc.groups.map(g => g.court))
+    : Math.max(1, parseInt(document.getElementById('focCourts').value)||1);
+  const nextRound = S.foc.groups.length
+    ? Math.max(...S.foc.groups.map(g => g.round)) + 1
+    : 1;
+  for (let i = 0; i < extra; i++) {
+    const r = nextRound + i;
+    const shuffled = shuffleArray(S.players);
+    for (let c = 0; c < courts; c++) {
+      const slice = shuffled.slice(c * 4, c * 4 + 4);
+      if (slice.length < 4) break;
+      const [p0,p1,p2,p3] = slice;
+      S.foc.groups.push({
+        round: r, court: c + 1,
+        players: slice,
+        matches: [
+          { teamA:[p0,p1], teamB:[p2,p3], scores:[], completed:false, round:r, court:c+1 },
+          { teamA:[p0,p2], teamB:[p1,p3], scores:[], completed:false, round:r, court:c+1 },
+          { teamA:[p0,p3], teamB:[p1,p2], scores:[], completed:false, round:r, court:c+1 }
+        ]
+      });
+      S.collapsed[`foc-r${r}-c${c+1}`] = false;
+    }
+    S.collapsed[`foc-r${r}`] = false;
+  }
+  updateFocRoundStatus();
+  renderFocMatches();
+  toast(`Added ${extra} more round${extra!==1?'s':''}!`);
+  scheduleSync();
+}
+
+function addFocRoundsFromPlay() {
+  const extra = Math.max(1, parseInt(document.getElementById('focAddRoundCountPlay').value)||1);
+  addFocRound(extra);
+}
+
+function addFocRoundsFromSetup() {
+  const extra = Math.max(1, parseInt(document.getElementById('focAddRoundCountSetup').value)||1);
+  addFocRound(extra);
+}
+
+function updateFocRoundStatus() {
+  const el = document.getElementById('focRoundStatus');
+  if (!el) return;
+  const groups = S.foc.groups;
+  if (!groups.length) { el.style.display = 'none'; return; }
+  const rounds = Math.max(...groups.map(g => g.round));
+  const totalM = groups.reduce((s,g) => s + g.matches.length, 0);
+  const doneM  = groups.reduce((s,g) => s + g.matches.filter(m=>m.completed).length, 0);
+  document.getElementById('focRoundStatusText').textContent =
+    `${rounds} round${rounds!==1?'s':''} generated — ${doneM}/${totalM} matches complete`;
+  el.style.display = 'block';
+}
+
+function toggleEditFocGroup(gi) {
+  _editingFocGroup = _editingFocGroup === gi ? null : gi;
+  renderFocMatches();
+}
+
+function cancelEditFocGroup() {
+  _editingFocGroup = null;
+  renderFocMatches();
+}
+
+function saveFocGroup(gi) {
+  const g = S.foc.groups[gi];
+  const getP = id => S.players.find(p => p.id === id);
+  const p0 = getP(document.getElementById(`focep-p0-${gi}`).value);
+  const p1 = getP(document.getElementById(`focep-p1-${gi}`).value);
+  const p2 = getP(document.getElementById(`focep-p2-${gi}`).value);
+  const p3 = getP(document.getElementById(`focep-p3-${gi}`).value);
+  if (!p0||!p1||!p2||!p3) { toast('Select a player for every slot.'); return; }
+  if (new Set([p0.id,p1.id,p2.id,p3.id]).size < 4) { toast('Each slot must be a different player.'); return; }
+  g.players = [p0,p1,p2,p3];
+  const r = g.round, c = g.court;
+  g.matches = [
+    { teamA:[p0,p1], teamB:[p2,p3], scores:[], completed:false, round:r, court:c },
+    { teamA:[p0,p2], teamB:[p1,p3], scores:[], completed:false, round:r, court:c },
+    { teamA:[p0,p3], teamB:[p1,p2], scores:[], completed:false, round:r, court:c }
+  ];
+  _editingFocGroup = null;
+  renderFocMatches();
+  scheduleSync();
+  toast('Court players updated — matches regenerated.');
+}
+
 function renderFocMatches() {
   const area = document.getElementById('focMatchArea');
   if (!S.foc.groups.length) { area.innerHTML = '<div class="empty-state">Set up courts and generate the schedule first.</div>'; return; }
+  const addRoundsBar = `
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 14px;background:var(--blue-light);border-radius:var(--radius);border:1.5px solid var(--blue);margin-bottom:12px">
+      <span style="font-size:.85rem;font-weight:700;color:var(--blue-darker)">Add more rounds:</span>
+      <input type="number" id="focAddRoundCountPlay" min="1" max="20" value="1" style="width:70px">
+      <button class="btn btn-primary btn-sm" onclick="addFocRoundsFromPlay()">+ Add Rounds</button>
+    </div>`;
   const roundNums = [...new Set(S.foc.groups.map(g => g.round))].sort((a,b) => a-b);
-  area.innerHTML = roundNums.map(r => {
+  area.innerHTML = addRoundsBar + roundNums.map(r => {
     const rKey = `foc-r${r}`;
     const rCol = S.collapsed[rKey];
     const courtsInRound = S.foc.groups.filter(g => g.round === r);
@@ -809,12 +916,34 @@ function renderFocMatches() {
             const gi = S.foc.groups.indexOf(g);
             const cKey = `foc-r${r}-c${g.court}`;
             const cCol = S.collapsed[cKey];
+            const anyDone = g.matches.some(m => m.completed);
+            const isEditing = _editingFocGroup === gi;
+            const playerOpts = S.players.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
+            const makeSelect = (slot, cur) => `
+              <select id="focep-${slot}-${gi}" style="font-size:.82rem;padding:5px 8px;border-radius:6px;border:1.5px solid var(--blue);background:#fff;width:100%;margin-bottom:4px">
+                ${S.players.map(p => `<option value="${p.id}"${p.id===cur.id?' selected':''}>${esc(p.name)}</option>`).join('')}
+              </select>`;
+            const editPanel = isEditing ? `
+              <div style="background:var(--blue-light);border-radius:var(--radius);padding:12px;margin:8px 0">
+                <div style="font-size:.78rem;font-weight:700;color:var(--blue-darker);margin-bottom:8px">Edit Court ${g.court} Players — Round ${r}</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                  <div>${makeSelect('p0',g.players[0])}${makeSelect('p1',g.players[1])}</div>
+                  <div>${makeSelect('p2',g.players[2])}${makeSelect('p3',g.players[3])}</div>
+                </div>
+                <div style="font-size:.75rem;color:var(--gray-500);margin:6px 0 8px">Match pairings will be regenerated from these 4 players.</div>
+                <div style="display:flex;gap:8px">
+                  <button class="btn btn-primary btn-sm" onclick="saveFocGroup(${gi})">✓ Save</button>
+                  <button class="btn btn-secondary btn-sm" onclick="cancelEditFocGroup()">✕ Cancel</button>
+                </div>
+              </div>` : '';
             return `
-              <div class="court-header ${cCol?'collapsed':''}" onclick="togglePool('${cKey}')">
-                <span>🏓 Court ${g.court}</span>
-                <span>${g.matches.filter(m=>m.completed).length}/${g.matches.length} complete <i class="chevron">▾</i></span>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;background:var(--blue-light);padding:8px 14px;border-radius:${cCol?'var(--radius)':'var(--radius) var(--radius) 0 0'}">
+                <span style="font-weight:700;color:var(--blue-darker);font-size:.85rem;cursor:pointer;flex:1" onclick="togglePool('${cKey}')">🏓 Court ${g.court} <i class="chevron" style="${cCol?'transform:rotate(-90deg)':''}">▾</i></span>
+                <span style="font-size:.8rem;color:var(--gray-700);margin-right:10px;cursor:pointer" onclick="togglePool('${cKey}')">${g.matches.filter(m=>m.completed).length}/${g.matches.length} complete</span>
+                ${!S.locked&&!anyDone ? `<button class="btn btn-secondary btn-sm" onclick="toggleEditFocGroup(${gi})" style="padding:3px 9px;font-size:.75rem">${isEditing?'✕':'✎'} Players</button>` : ''}
               </div>
-              <div class="court-body ${cCol?'collapsed':''}">
+              ${editPanel}
+              <div class="${cCol?'court-body collapsed':'court-body'}" style="border-radius:${isEditing?'0':'0 0 var(--radius) var(--radius)'}">
                 ${g.matches.map((m,mi) => matchCard(m,'foc',gi,mi)).join('')}
               </div>`;
           }).join('')}
@@ -1564,7 +1693,7 @@ function renderManualMatches() {
 }
 
 // ─── FIREBASE SYNC ────────────────────────────────────────────────────────────
-let _db = null, _syncTimer = null, _editingMatch = null;
+let _db = null, _syncTimer = null, _editingMatch = null, _editingFocGroup = null;
 
 function initFirebase() {
   document.getElementById('firebaseCard').style.display = 'block';
@@ -1582,6 +1711,7 @@ function initFirebase() {
     setSyncDot('idle');
     loadFromFirebase(true);
     updateShuffleRoundStatus();
+    updateFocRoundStatus();
   } catch(e) {
     console.error('Firebase init failed:', e);
     setSyncDot('error');
@@ -1631,7 +1761,7 @@ function loadFromFirebase(silent = false) {
     renderPlayerTable(); renderTeamList(); renderShufflePlayerTable(); renderManualPlayerTable();
     populateFpSelects(); populateManualSelects();
     renderFocMatches(); renderFpMatches(); renderShuffleMatches(); renderManualMatches();
-    updateShuffleRoundStatus();
+    updateFocRoundStatus(); updateShuffleRoundStatus();
     updateSessionIdDisplay();
     setSyncDot('saved');
     toast('Session loaded from cloud ☁️');
