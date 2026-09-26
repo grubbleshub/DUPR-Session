@@ -486,6 +486,14 @@ pre{font-family:Menlo,Consolas,monospace;font-size:.72rem;overflow-x:auto;backgr
         </div>
       </div>
       <button class="btn btn-yellow" style="font-size:1rem;padding:14px 28px" onclick="generateShuffle()">Generate Random Schedule →</button>
+      <div id="shuffleRoundStatus" style="display:none;margin-top:14px;padding:12px 14px;background:var(--blue-light);border-radius:var(--radius);border:1.5px solid var(--blue)">
+        <div style="font-size:.85rem;font-weight:700;color:var(--blue-darker);margin-bottom:10px" id="shuffleRoundStatusText"></div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <label style="margin:0;font-size:.82rem;font-weight:700;color:var(--gray-700);white-space:nowrap">Add more rounds:</label>
+          <input type="number" id="shuffleAddRoundCount" min="1" max="20" value="1" style="width:70px">
+          <button class="btn btn-primary btn-sm" onclick="addShuffleRounds()">+ Add Rounds</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -1240,6 +1248,8 @@ function generateShuffle() {
   const courts = Math.max(1, parseInt(document.getElementById('shuffleCourts').value)||2);
   const roundCount = Math.max(1, parseInt(document.getElementById('shuffleRoundCount').value)||3);
   if (S.shuffle.players.length < 4) { toast('Need at least 4 players.'); return; }
+  const hasCompleted = S.shuffle.rounds.some(r => r.matches.some(m => m.completed));
+  if (hasCompleted && !confirm('This will replace all existing rounds including completed scores. Continue?\n\nTip: use "Add Rounds" below to add rounds without losing existing data.')) return;
   S.shuffle.courts = courts;
   S.shuffle.roundCount = roundCount;
   S.shuffle.rounds = [];
@@ -1259,10 +1269,51 @@ function generateShuffle() {
   }
   // collapse all rounds by default
   S.shuffle.rounds.forEach((rd, ri) => { S.collapsed[`shuffle-r${ri}`] = true; });
+  updateShuffleRoundStatus();
   renderShuffleMatches();
   showInner('shuffle', 'play', document.querySelector('#tab-shuffle .inner-tab:nth-child(2)'));
   toast('Random schedule generated!');
   scheduleSync();
+}
+
+function addShuffleRounds() {
+  if (S.shuffle.players.length < 4) { toast('Need at least 4 players.'); return; }
+  const extra = Math.max(1, parseInt(document.getElementById('shuffleAddRoundCount').value) || 1);
+  const courts = S.shuffle.courts || 2;
+  const startRound = S.shuffle.rounds.length + 1;
+  for (let r = 0; r < extra; r++) {
+    const roundNum = startRound + r;
+    const shuffled = shuffleArray(S.shuffle.players);
+    const matches = [];
+    let courtNum = 1;
+    for (let i = 0; i + 3 < shuffled.length && courtNum <= courts; i += 4) {
+      matches.push({
+        teamA: [shuffled[i], shuffled[i+1]],
+        teamB: [shuffled[i+2], shuffled[i+3]],
+        court: courtNum++, round: roundNum,
+        scores: [], completed: false
+      });
+    }
+    S.shuffle.rounds.push({ round: roundNum, matches });
+    S.collapsed[`shuffle-r${S.shuffle.rounds.length - 1}`] = true;
+  }
+  S.shuffle.roundCount = S.shuffle.rounds.length;
+  updateShuffleRoundStatus();
+  renderShuffleMatches();
+  toast(`Added ${extra} more round${extra !== 1 ? 's' : ''}!`);
+  scheduleSync();
+}
+
+function updateShuffleRoundStatus() {
+  const el = document.getElementById('shuffleRoundStatus');
+  if (!el) return;
+  const rounds = S.shuffle.rounds;
+  if (!rounds.length) { el.style.display = 'none'; return; }
+  const totalMatches = rounds.reduce((sum, r) => sum + r.matches.length, 0);
+  const doneMatches = rounds.reduce((sum, r) => sum + r.matches.filter(m => m.completed).length, 0);
+  document.getElementById('shuffleRoundStatusText').textContent =
+    `${rounds.length} round${rounds.length !== 1 ? 's' : ''} already generated — ${doneMatches}/${totalMatches} matches complete`;
+  el.style.display = 'block';
 }
 
 function renderShuffleMatches() {
@@ -1480,6 +1531,7 @@ function loadFromFirebase(silent = false) {
     renderPlayerTable(); renderTeamList(); renderShufflePlayerTable(); renderManualPlayerTable();
     populateFpSelects(); populateManualSelects();
     renderFocMatches(); renderFpMatches(); renderShuffleMatches(); renderManualMatches();
+    updateShuffleRoundStatus();
     updateSessionIdDisplay();
     setSyncDot('saved');
     toast('Session loaded from cloud ☁️');
