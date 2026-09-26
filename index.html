@@ -653,6 +653,7 @@ function showInner(prefix, name, btn) {
     else if (prefix === 'shuffle') renderShuffleMatches();
     else if (prefix === 'manual') renderManualMatches();
   }
+  if (prefix === 'shuffle' && name === 'setup') updateShuffleRoundStatus();
 }
 
 // ─── EVENT ────────────────────────────────────────────────────────────────────
@@ -1482,6 +1483,7 @@ function initFirebase() {
     _db = firebase.database();
     setSyncDot('idle');
     loadFromFirebase(true);
+    updateShuffleRoundStatus();
   } catch(e) {
     console.error('Firebase init failed:', e);
     setSyncDot('error');
