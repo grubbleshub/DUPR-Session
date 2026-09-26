@@ -869,7 +869,7 @@ function cancelEditFocGroup() {
 
 function saveFocGroup(gi) {
   const g = S.foc.groups[gi];
-  const getP = id => S.players.find(p => p.id === id);
+  const getP = idx => S.players[parseInt(idx)];
   const p0 = getP(document.getElementById(`focep-p0-${gi}`).value);
   const p1 = getP(document.getElementById(`focep-p1-${gi}`).value);
   const p2 = getP(document.getElementById(`focep-p2-${gi}`).value);
@@ -919,10 +919,12 @@ function renderFocMatches() {
             const anyDone = g.matches.some(m => m.completed);
             const isEditing = _editingFocGroup === gi;
             const playerOpts = S.players.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
-            const makeSelect = (slot, cur) => `
-              <select id="focep-${slot}-${gi}" style="font-size:.82rem;padding:5px 8px;border-radius:6px;border:1.5px solid var(--blue);background:#fff;width:100%;margin-bottom:4px">
-                ${S.players.map(p => `<option value="${p.id}"${p.id===cur.id?' selected':''}>${esc(p.name)}</option>`).join('')}
+            const makeSelect = (slot, cur) => {
+              const curIdx = S.players.findIndex(p => p.id === (cur && cur.id));
+              return `<select id="focep-${slot}-${gi}" style="font-size:.82rem;padding:5px 8px;border-radius:6px;border:1.5px solid var(--blue);background:#fff;width:100%;margin-bottom:4px">
+                ${S.players.map((p,i) => `<option value="${i}"${i===curIdx?' selected':''}>${esc(p.name)}</option>`).join('')}
               </select>`;
+            };
             const editPanel = isEditing ? `
               <div style="background:var(--blue-light);border-radius:var(--radius);padding:12px;margin:8px 0">
                 <div style="font-size:.78rem;font-weight:700;color:var(--blue-darker);margin-bottom:8px">Edit Court ${g.court} Players — Round ${r}</div>
@@ -1120,13 +1122,13 @@ function matchCard(match, type, groupIdx, matchIdx) {
   const playerOpts = type === 'shuffle'
     ? S.shuffle.players.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('')
     : '';
-  const selVal = (slot) => {
+  const selIdx = (slot) => {
     const cur = slot === 'a0' ? match.teamA[0] : slot === 'a1' ? match.teamA[1] : slot === 'b0' ? match.teamB[0] : match.teamB[1];
-    return cur ? cur.id : '';
+    return cur ? S.shuffle.players.findIndex(p => p.id === cur.id) : 0;
   };
   const makeSelect = (slot) => `
     <select id="ep-${slot}-${groupIdx}-${matchIdx}" style="font-size:.82rem;padding:5px 8px;border-radius:6px;border:1.5px solid var(--blue);background:#fff;width:100%;margin-bottom:4px">
-      ${S.shuffle.players.map(p => `<option value="${p.id}"${p.id===selVal(slot)?' selected':''}>${esc(p.name)}</option>`).join('')}
+      ${S.shuffle.players.map((p,i) => `<option value="${i}"${i===selIdx(slot)?' selected':''}>${esc(p.name)}</option>`).join('')}
     </select>`;
   const teamsHtml = isEditing ? `
     <div style="background:var(--blue-light);border-radius:var(--radius);padding:12px;margin-bottom:10px">
@@ -1238,7 +1240,7 @@ function cancelEditPlayers() {
 function saveMatchPlayers(gi, mi) {
   const m = S.shuffle.rounds[gi].matches[mi];
   const players = S.shuffle.players;
-  const getP = id => players.find(p => p.id === id);
+  const getP = idx => players[parseInt(idx)];
   const a0 = getP(document.getElementById(`ep-a0-${gi}-${mi}`).value);
   const a1 = getP(document.getElementById(`ep-a1-${gi}-${mi}`).value);
   const b0 = getP(document.getElementById(`ep-b0-${gi}-${mi}`).value);
