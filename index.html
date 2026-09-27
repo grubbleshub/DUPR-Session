@@ -1680,6 +1680,13 @@ function clearManualPlayers() {
   scheduleSync();
 }
 
+function clearManualMatches() {
+  if (!confirm('Clear all matches and scores? Players will be kept.')) return;
+  S.manual.matches = [];
+  renderManualMatches();
+  scheduleSync();
+}
+
 function renderManualPlayerTable() {
   const count = S.manual.players.length;
   document.getElementById('manualPlayerCount').textContent = count;
@@ -1740,7 +1747,10 @@ function renderManualMatches() {
     area.innerHTML = '<div class="empty-state">No matches added yet. Use the form above to add a match.</div>' + sessionBar('manual');
     return;
   }
-  area.innerHTML = S.manual.matches.map((m, mi) => `
+  const clearBtn = !S.locked ? `<div style="text-align:right;margin-bottom:12px">
+    <button class="btn btn-danger btn-sm" onclick="clearManualMatches()">🗑 Clear All Matches</button>
+  </div>` : '';
+  area.innerHTML = clearBtn + S.manual.matches.map((m, mi) => `
     <div style="margin-bottom:4px">
       ${matchCard(m, 'manual', 0, mi)}
       ${!S.locked ? `<div style="text-align:right;margin-top:-4px;margin-bottom:10px">
